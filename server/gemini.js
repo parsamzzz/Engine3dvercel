@@ -9,7 +9,9 @@ const upload = multer()
 // ✅ کلیدهای مستقیم اینجا تعریف می‌شن
 const API_KEYS = [
   'AIzaSyAmDnnMUYcv6QMt-fhF0YHdRzD4x2qDwqg',
-  'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g'
+  'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
+  'AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE',
+  'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA'
 ]
 
 router.post('/', upload.single('image'), async (req, res) => {
