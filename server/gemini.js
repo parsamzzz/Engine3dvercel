@@ -1,18 +1,16 @@
 import express from 'express'
 import multer from 'multer'
 import axios from 'axios'
-import mime from 'mime-types' // نصب: npm i mime-types
+import mime from 'mime-types'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 const router = express.Router()
 const upload = multer()
 
-// ✅ کلیدهای مستقیم اینجا تعریف می‌شن
-const API_KEYS = [
-  'AIzaSyAmDnnMUYcv6QMt-fhF0YHdRzD4x2qDwqg',
-  'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
-  'AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE',
-  'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA'
-]
+// گرفتن کلیدها از .env و تبدیل به آرایه
+const API_KEYS = process.env.GEMINI_API_KEYS?.split(',').map(k => k.trim()) || []
 
 router.post('/', upload.single('image'), async (req, res) => {
   const prompt = req.body.prompt
@@ -29,7 +27,6 @@ router.post('/', upload.single('image'), async (req, res) => {
     return res.status(400).json({ error: 'prompt یا تصویر ارسال نشده.' })
   }
 
-  // تشخیص نوع فایل
   const mimeType = mime.lookup(originalName) || file.mimetype
   console.log('🧪 تشخیص MIME type:', mimeType)
 
