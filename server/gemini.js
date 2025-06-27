@@ -9,7 +9,7 @@ dotenv.config()
 const router = express.Router()
 const upload = multer()
 
-// API keys برای Gemini
+
 const API_KEYS = process.env.GEMINI_API_KEYS?.split(',').map(k => k.trim()) || []
 
 // کلید خصوصی برای احراز هویت
