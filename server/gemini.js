@@ -9,20 +9,10 @@ dotenv.config()
 const router = express.Router()
 const upload = multer()
 
-// کلیدهای عمومی برای Google Gemini
+// گرفتن کلیدها از .env و تبدیل به آرایه
 const API_KEYS = process.env.GEMINI_API_KEYS?.split(',').map(k => k.trim()) || []
 
-// کلید دسترسی خصوصی برای حفاظت API
-const PRIVATE_KEY = process.env.PRIVATE_API_KEY
-
 router.post('/', upload.single('image'), async (req, res) => {
-  // ⛔ بررسی کلید امنیتی
-  const clientKey = req.headers['x-api-key']
-  if (!clientKey || clientKey !== PRIVATE_KEY) {
-    console.warn('🛑 درخواست بدون یا با کلید نامعتبر رد شد.')
-    return res.status(403).json({ error: 'Unauthorized' })
-  }
-
   const prompt = req.body.prompt
   const file = req.file
   const imageBuffer = file?.buffer

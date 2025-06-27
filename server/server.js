@@ -91,7 +91,7 @@ const BASE_PROMPT = `
 app.use(cors());
 app.use(express.json());
 
-// ✅ اضافه‌شده: API تولید تصویر با Gemini
+
 app.use('/api/gemini-image', geminiImageRoute);
 
 // 🧠 پاسخ به چت
