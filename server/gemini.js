@@ -1,85 +1,95 @@
 import express from 'express'
 import multer from 'multer'
-import axios from 'axios'
 import mime from 'mime-types'
 import dotenv from 'dotenv'
+import { GoogleGenAI, Modality } from '@google/genai'
 
 dotenv.config()
 
 const router = express.Router()
 const upload = multer()
 
-
 const API_KEYS = process.env.GEMINI_API_KEYS?.split(',').map(k => k.trim()) || []
-
-// کلید خصوصی برای احراز هویت
 const PRIVATE_KEY = process.env.PRIVATE_API_KEY
 
-router.post('/', upload.single('image'), async (req, res) => {
-  // ⛔ بررسی احراز هویت
-  const clientKey = req.headers['x-api-key']
-  if (!clientKey || clientKey !== PRIVATE_KEY) {
-    console.warn('🛑 دسترسی غیرمجاز.')
-    return res.status(403).json({ error: 'Unauthorized' })
-  }
-
-  const prompt = req.body.prompt
-  const file = req.file
-  const imageBuffer = file?.buffer
-  const originalName = file?.originalname
-
-  console.log('📥 prompt:', prompt)
-  console.log('📷 file:', originalName)
-  console.log('📏 size:', imageBuffer?.length || 0, 'bytes')
-
-  if (!prompt || !imageBuffer || !originalName) {
-    return res.status(400).json({ error: 'prompt یا تصویر ارسال نشده.' })
-  }
-
-  const mimeType = mime.lookup(originalName) || file.mimetype
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
-    return res.status(415).json({ error: 'فرمت تصویر پشتیبانی نمی‌شود.' })
-  }
-
-  const base64Image = imageBuffer.toString('base64')
-
-  for (const key of API_KEYS) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${key}`
-
-      const payload = {
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: mimeType,
-                  data: base64Image,
-                },
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE'],
-        },
-      }
-
-      const aiRes = await axios.post(url, payload, {
-        headers: { 'Content-Type': 'application/json' },
-      })
-
-      const base64 = aiRes.data?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data
-      if (base64) {
-        return res.json({ base64 })
-      }
-    } catch (err) {
-      console.error(`❌ Key ${key.substring(0, 15)}...`, err.response?.data?.error?.message || err.message)
+router.post('/', upload.single('image'), async (req, res, next) => {
+  try {
+    const clientKey = req.headers['x-api-key']
+    if (!clientKey || clientKey !== PRIVATE_KEY) {
+      console.warn('🛑 دسترسی غیرمجاز.')
+      return res.status(403).json({ error: 'Unauthorized' })
     }
-  }
 
-  res.status(500).json({ error: 'هیچ‌کدام از کلیدهای Gemini موفق نبود.' })
+    const prompt = req.body.prompt
+    const file = req.file
+    const imageBuffer = file?.buffer
+    const originalName = file?.originalname
+
+    if (!prompt || !imageBuffer || !originalName) {
+      return res.status(400).json({ error: 'prompt یا تصویر ارسال نشده.' })
+    }
+
+    const mimeType = mime.lookup(originalName) || file.mimetype
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
+      return res.status(415).json({ error: 'فرمت تصویر پشتیبانی نمی‌شود.' })
+    }
+
+    const base64Image = imageBuffer.toString('base64')
+
+    for (const key of API_KEYS) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: key })
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.0-flash-preview-image-generation',
+          contents: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType,
+                data: base64Image,
+              },
+            },
+          ],
+          config: {
+            responseModalities: [Modality.TEXT, Modality.IMAGE],
+          },
+        })
+
+        const parts = response.candidates?.[0]?.content?.parts || []
+        const imagePart = parts.find(part =>
+          part.inlineData?.mimeType?.startsWith('image/')
+        )
+
+        if (imagePart && imagePart.inlineData?.data) {
+          const base64 = imagePart.inlineData.data
+          console.log(`✅ تصویر تولید شد با کلید: ${key.substring(0, 10)}...`)
+          return res.json({ base64 })
+        } else {
+          console.warn('⚠️ تصویری در پاسخ Gemini پیدا نشد.')
+          return res.status(200).json({
+            message: 'درخواست با موفقیت پردازش شد، اما تصویری تولید نشد.',
+            parts,
+          })
+        }
+      } catch (err) {
+        console.error(`❌ Key ${key.substring(0, 15)}... با خطا مواجه شد:`, err.message)
+        if (err.response?.data?.error?.message) {
+          console.error('جزئیات خطای API:', err.response.data.error.message)
+        }
+      }
+    }
+
+    res.status(500).json({ error: 'هیچ‌کدام از کلیدهای Gemini موفق نبودند یا تصویری تولید نشد.' })
+  } catch (err) {
+    next(err) // ارجاع خطا به middleware مدیریت خطا
+  }
+})
+
+// Middleware مدیریت خطا
+router.use((err, req, res, next) => {
+  console.error('Unhandled error:', err)
+  res.status(500).json({ error: 'خطای سرور رخ داده است.' })
 })
 
 export default router
