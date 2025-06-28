@@ -1,18 +1,22 @@
 import express from 'express';
 import multer from 'multer';
 import mime from 'mime-types';
-import dotenv from 'dotenv';
 import { GoogleGenAI, Modality } from '@google/genai';
-
-dotenv.config();
 
 const router = express.Router();
 const upload = multer();
 
-const API_KEYS = process.env.GEMINI_API_KEYS?.split(',').map(k => k.trim()) || [];
-const PRIVATE_KEY = process.env.PRIVATE_API_KEY;
+// 🔐 کلیدهای ثابت و امنیتی
+const API_KEYS = [
+  'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
+  'AIzaSyAmDnnMUYcv6QMt-fhF0YHdRzD4x2qDwqg',
+  'AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE',
+  'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA',
+];
 
-let apiKeyIndex = 0; // برای چرخش کلیدها
+const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
+
+let apiKeyIndex = 0;
 
 router.post('/', upload.single('image'), async (req, res, next) => {
   try {
@@ -37,14 +41,8 @@ router.post('/', upload.single('image'), async (req, res, next) => {
     }
 
     const base64Image = imageBuffer.toString('base64');
-
-    // تعداد کلیدها
     const totalKeys = API_KEYS.length;
-    if (totalKeys === 0) {
-      return res.status(500).json({ error: 'کلید API موجود نیست.' });
-    }
 
-    // شروع از ایندکس فعلی، تا کلیدها رو یک بار چک کنیم
     for (let i = 0; i < totalKeys; i++) {
       const currentKeyIndex = (apiKeyIndex + i) % totalKeys;
       const key = API_KEYS[currentKeyIndex];
@@ -77,7 +75,6 @@ router.post('/', upload.single('image'), async (req, res, next) => {
           const base64 = imagePart.inlineData.data;
           console.log(`✅ تصویر تولید شد با کلید: ${key.substring(0, 10)}...`);
 
-          // به‌روزرسانی apiKeyIndex به کلید بعدی برای درخواست بعدی
           apiKeyIndex = (currentKeyIndex + 1) % totalKeys;
 
           return res.json({ base64 });
@@ -93,7 +90,7 @@ router.post('/', upload.single('image'), async (req, res, next) => {
         if (err.response?.data?.error?.message) {
           console.error('جزئیات خطای API:', err.response.data.error.message);
         }
-        // خطا رو بخون ولی تلاش کن با کلید بعدی ادامه بدی
+        // برو سراغ کلید بعدی
       }
     }
 
