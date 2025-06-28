@@ -71,7 +71,6 @@ app.use((req, res) => {
   res.status(404).send('404 - مسیر مورد نظر وجود ندارد.');
 });
 
-// Middleware مدیریت خطاهای ناشناخته روت‌ها
 app.use((err, req, res, next) => {
   console.error('Unhandled route error:', err);
   res.status(500).json({ error: 'خطای سرور رخ داده است.' });
