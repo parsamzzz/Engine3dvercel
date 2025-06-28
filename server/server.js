@@ -3,7 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
-import geminiImageRoute from './server/routes/gemini.js';
+import geminiImageRoute from './routes/gemini.js';
 import axios from 'axios';
 
 dotenv.config();
