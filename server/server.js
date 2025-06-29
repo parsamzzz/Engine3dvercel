@@ -9,7 +9,12 @@ import axios from 'axios';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
+
+if (!PORT) {
+  console.error('ERROR: PORT environment variable is not defined.');
+  process.exit(1);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -85,6 +90,24 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
-});
+// استارت سرور بدون callback
+app.listen(PORT);
+
+// شروع پینگ بلافاصله و سپس هر 5 دقیقه
+(async function startPing() {
+  try {
+    const res = await axios.get('https://httpstat.us/200');
+    console.log(`[Ping] Initial status: ${res.status} - ${new Date().toISOString()}`);
+  } catch (e) {
+    console.error('[Ping] Initial error:', e.message);
+  }
+
+  setInterval(async () => {
+    try {
+      const response = await axios.get('https://httpstat.us/200');
+      console.log(`[Ping] Status: ${response.status} - ${new Date().toISOString()}`);
+    } catch (error) {
+      console.error(`[Ping] Error:`, error.message);
+    }
+  }, 5 * 60 * 1000);
+})();
