@@ -51,8 +51,8 @@ router.post('/', async (req, res, next) => {
         });
 
         const parts = response.candidates?.[0]?.content?.parts || [];
-        const imagePart = parts.find(part =>
-          part.inlineData?.mimeType?.startsWith('image/')
+        const imagePart = parts.find(
+          (part) => part.inlineData?.mimeType?.startsWith('image/')
         );
 
         if (imagePart?.inlineData?.data) {
@@ -72,11 +72,16 @@ router.post('/', async (req, res, next) => {
           });
         }
       } catch (err) {
-        console.error(`❌ Key ${key.substring(0, 15)}... با خطا مواجه شد:`, err.message);
+        console.error(
+          `❌ کلید ${key.substring(0, 15)}... با خطا مواجه شد:`,
+          err.message
+        );
       }
     }
 
-    res.status(500).json({ error: 'همه‌ی کلیدها fail شدن یا تصویری تولید نشد.' });
+    return res.status(500).json({
+      error: 'همه کلیدها با خطا مواجه شدند یا تصویری تولید نشد.',
+    });
   } catch (err) {
     next(err);
   }

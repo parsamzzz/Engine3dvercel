@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import axios from 'axios';
 
 import geminiImageRoute from './routes/gemini.js';
-import textToImageRoute from './routes/text-to-image.js';
+import textToImageRouter from './routes/text-to-image.js';
 import textToSpeechRoute from './routes/text-to-speech.js';
 
 dotenv.config();
@@ -30,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // 🧠 روت‌های API
 app.use('/api/gemini-image', geminiImageRoute);
-app.use('/api/text-to-image', textToImageRoute);
+app.use('/api/text-to-image', textToImageRouter);
 app.use('/api/text-to-speech', textToSpeechRoute);
 
 const BASE_PROMPT = `
