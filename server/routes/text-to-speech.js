@@ -22,7 +22,10 @@ router.post('/', async (req, res, next) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const { text } = req.body;
+    const { text, multiSpeaker } = req.body;
+    // text: رشته متنی برای تبدیل به صدا
+    // multiSpeaker: آرایه یا آبجکت برای چند گوینده (اختیاری)
+
     if (!text || typeof text !== 'string' || text.trim() === '') {
       return res.status(400).json({ error: 'text معتبر نیست.' });
     }
@@ -36,18 +39,40 @@ router.post('/', async (req, res, next) => {
       try {
         const ai = new GoogleGenAI({ apiKey: key });
 
+        // پیکربندی چند گوینده
+        let speechConfig = {};
+
+        if (multiSpeaker && Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
+          // ساخت config برای چند گوینده
+          speechConfig = {
+            multiSpeakerVoiceConfig: {
+              speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
+                speaker,
+                voiceConfig: {
+                  prebuiltVoiceConfig: {
+                    voiceName: voiceName || 'Kore', // صدای پیش‌فرض Kore
+                  },
+                },
+              })),
+            },
+          };
+        } else {
+          // حالت تک‌گوینده
+          speechConfig = {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: 'Kore',
+              },
+            },
+          };
+        }
+
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-flash-preview-tts',
           contents: [{ parts: [{ text }] }],
           config: {
             responseModalities: [Modality.AUDIO],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: {
-                  voiceName: 'Kore' // فعلاً فقط انگلیسی
-                }
-              }
-            }
+            speechConfig,
           },
         });
 
