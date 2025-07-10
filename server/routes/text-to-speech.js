@@ -22,9 +22,10 @@ router.post('/', async (req, res, next) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const { text, multiSpeaker } = req.body;
+    const { text, multiSpeaker, voiceName } = req.body;
     // text: رشته متنی برای تبدیل به صدا
     // multiSpeaker: آرایه یا آبجکت برای چند گوینده (اختیاری)
+    // voiceName: نام صدای انتخاب شده برای حالت تک‌گوینده (اختیاری)
 
     if (!text || typeof text !== 'string' || text.trim() === '') {
       return res.status(400).json({ error: 'text معتبر نیست.' });
@@ -39,29 +40,28 @@ router.post('/', async (req, res, next) => {
       try {
         const ai = new GoogleGenAI({ apiKey: key });
 
-        // پیکربندی چند گوینده
         let speechConfig = {};
 
         if (multiSpeaker && Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
-          // ساخت config برای چند گوینده
+          // حالت چندگوینده
           speechConfig = {
             multiSpeakerVoiceConfig: {
               speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
                 speaker,
                 voiceConfig: {
                   prebuiltVoiceConfig: {
-                    voiceName: voiceName || 'Kore', // صدای پیش‌فرض Kore
+                    voiceName: voiceName || 'Kore',
                   },
                 },
               })),
             },
           };
         } else {
-          // حالت تک‌گوینده
+          // حالت تک‌گوینده: استفاده از voiceName ارسالی یا پیش‌فرض 'Kore'
           speechConfig = {
             voiceConfig: {
               prebuiltVoiceConfig: {
-                voiceName: 'Kore',
+                voiceName: voiceName || 'Kore',
               },
             },
           };
