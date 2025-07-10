@@ -18,12 +18,12 @@ router.post("/", async (req, res, next) => {
   try {
     const clientKey = req.headers["x-api-key"];
     if (!clientKey || clientKey !== PRIVATE_KEY) {
-      return res.status(403).json({ error: "Unauthorized" });
+      return res.status(403).json({ error: "⛔ دسترسی غیرمجاز." });
     }
 
     const prompt = req.body.prompt;
     if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
-      return res.status(400).json({ error: "prompt معتبر نیست." });
+      return res.status(400).json({ error: "⛔ prompt معتبر نیست." });
     }
 
     const totalKeys = API_KEYS.length;

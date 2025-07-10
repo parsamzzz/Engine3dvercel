@@ -196,7 +196,7 @@ app.listen(PORT);
 // ⏱ پینگ زنده نگه‌دارنده
 (async function startPing() {
   try {
-    const res = await axios.get('https://httpstat.us/200');
+    const res = await axios.get('https://api.restful-api.dev/objects/1');
     console.log(`[Ping] Initial status: ${res.status} - ${new Date().toISOString()}`);
   } catch (e) {
     console.error('[Ping] Initial error:', e.message);
@@ -204,10 +204,10 @@ app.listen(PORT);
 
   setInterval(async () => {
     try {
-      const response = await axios.get('https://httpstat.us/200');
+      const response = await axios.get('https://api.restful-api.dev/objects/1');
       console.log(`[Ping] Status: ${response.status} - ${new Date().toISOString()}`);
     } catch (error) {
       console.error(`[Ping] Error:`, error.message);
     }
-  }, 5 * 60 * 1000);
+  },10 * 60 * 1000);
 })();
