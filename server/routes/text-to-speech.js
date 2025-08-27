@@ -5,6 +5,7 @@ const router = express.Router();
 
 // 🔐 کلیدهای API گوگل
 const API_KEYS = [
+  'AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI',
   'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
   'AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE',
   'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA',
