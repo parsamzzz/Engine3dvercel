@@ -6,19 +6,10 @@ const router = express.Router();
 // 🔐 کلیدهای API گوگل
 const API_KEYS = [
   'AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI',
-  'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
-  'AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE',
-  'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA',
-  'AIzaSyAzweAy_UzoquW2EMJ7n6mzSe-EUQZ7GCk',
-  'AIzaSyCy54Aij_7FQullxvbGlHb_JspAdkQCvGs',
-  'AIzaSyAXGxErlDP7gEZ5nWCxDl3V0Tu5Poo6AzQ',
-  'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY',
-  'AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y',
-  'AIzaSyARk8SUMKga6uXMt6v-FWtGdlo6arfgtUM',
-  'AIzaSyCTvLkv3OLTNrs2oM3aLojfcH-OqxGpoLU',
-  'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
-  'AIzaSyDqXmdk8a3euOrvH-FTsSmUA0BP6wfPPIk',
-  'AIzaSyBD5V0Y0BYKFUIFvbnmi46IFuh5y-ibSdA',
+  'AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0',
+  'AIzaSyAjQCP-lHUKrkg4Z1cBMebBkFi1Mxu0s4U',
+  'AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc',
+
 ];
 
 // 🛡 کلید خصوصی کلاینت
