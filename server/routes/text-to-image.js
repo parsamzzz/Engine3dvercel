@@ -4,19 +4,26 @@ import { GoogleGenAI, Modality } from "@google/genai";
 const router = express.Router();
 
 const API_KEYS = [
- 'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
+  'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
+  'AIzaSyAmDnnMUYcv6QMt-fhF0YHdRzD4x2qDwqg',
   'AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE',
   'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA',
-  'AIzaSyAzweAy_UzoquW2EMJ7n6mzSe-EUQZ7GCk',
-  'AIzaSyCy54Aij_7FQullxvbGlHb_JspAdkQCvGs',
-  'AIzaSyAXGxErlDP7gEZ5nWCxDl3V0Tu5Poo6AzQ',
-  'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY',
-  'AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y',
-  'AIzaSyARk8SUMKga6uXMt6v-FWtGdlo6arfgtUM',
-  'AIzaSyCTvLkv3OLTNrs2oM3aLojfcH-OqxGpoLU',
-  'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
+  'AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0',
+  'AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc',
+  'AIzaSyBrYNNtwbvgky0rdEDyVzGGCTKxgH5Bsp8',
   'AIzaSyDqXmdk8a3euOrvH-FTsSmUA0BP6wfPPIk',
+  'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
+  'AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI',
+  'AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y',
+  'AIzaSyDAqLei5_h4y5Vg1qVSKvdbbLiHQrGfjX4',
+  'AIzaSyADOgOBfQT1U-bRQAxXscq4sPqJJlEz4_0',
+  'AIzaSyAZk5FE4XUx14SEH9n8wy6rh0PbVOM_e0o',
+  'AIzaSyBQ_yRx5w6bmhnYpeKqFGnWBwdtWoGFTgc',
   'AIzaSyBD5V0Y0BYKFUIFvbnmi46IFuh5y-ibSdA',
+  'AIzaSyARk8SUMKga6uXMt6v-FWtGdlo6arfgtUM',
+  'AIzaSyAXGxErlDP7gEZ5nWCxDl3V0Tu5Poo6AzQ',
+  'AIzaSyAzweAy_UzoquW2EMJ7n6mzSe-EUQZ7GCk',
+  'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY'
 ];
 
 const PRIVATE_KEY = "threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD";
