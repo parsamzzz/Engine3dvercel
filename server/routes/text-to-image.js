@@ -10,7 +10,6 @@ const API_KEYS = [
   'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA',
   'AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0',
   'AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc',
-  'AIzaSyBrYNNtwbvgky0rdEDyVzGGCTKxgH5Bsp8',
   'AIzaSyDqXmdk8a3euOrvH-FTsSmUA0BP6wfPPIk',
   'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
   'AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI',
