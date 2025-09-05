@@ -4,13 +4,8 @@ import { GoogleGenAI, Modality } from "@google/genai";
 const router = express.Router();
 
 const API_KEYS = [
-  
-
-
-
   'AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0',
   'AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc',
- 
   'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
   'AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI',
   'AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y',
@@ -23,8 +18,8 @@ const API_KEYS = [
   'AIzaSyAXGxErlDP7gEZ5nWCxDl3V0Tu5Poo6AzQ',
   'AIzaSyAzweAy_UzoquW2EMJ7n6mzSe-EUQZ7GCk',
   'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY',
-    'AIzaSyA-MtzXcddrH6ShV_y6hZ7fncpxy0d5JO4',
-'AIzaSyARi1ijMaLk5bQkJg08UCd0G7DcIJCtiIA'
+  'AIzaSyA-MtzXcddrH6ShV_y6hZ7fncpxy0d5JO4',
+  'AIzaSyARi1ijMaLk5bQkJg08UCd0G7DcIJCtiIA'
 ];
 
 const PRIVATE_KEY = "threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD";
@@ -70,14 +65,19 @@ router.post("/", async (req, res, next) => {
           const base64 = imagePart.inlineData.data;
           const mimeType = imagePart.inlineData.mimeType;
 
+          // لاگ موفقیت در تولید تصویر
+          console.log(`✅ تصویر با موفقیت تولید شد با کلید: ${key.substring(0, 15)}...`);
+
           // به کلید بعدی برای درخواست‌های بعدی برویم
           apiKeyIndex = (currentKeyIndex + 1) % totalKeys;
 
           return res.json({ base64, mimeType });
         } else {
+          // لاگ عدم موفقیت در تولید تصویر
           console.warn("⚠️ تصویری تولید نشد.");
         }
       } catch (err) {
+        // لاگ خطا در استفاده از کلید
         console.error(
           `❌ خطا در کلید ${key.substring(0, 15)}... :`,
           err.message

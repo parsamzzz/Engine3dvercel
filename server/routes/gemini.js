@@ -89,7 +89,7 @@ router.post('/', upload.single('image'), async (req, res, next) => {
 
         if (imagePart && imagePart.inlineData?.data) {
           const base64 = imagePart.inlineData.data;
-          console.log(`✅ تصویر تولید شد با کلید: ${currentKey.substring(0, 10)}...`);
+          console.log(`✅ تصویر به تصویر تولید شد با کلید: ${currentKey.substring(0, 10)}...`);
 
           // کلید را به بعدی تغییر می‌دهیم
           apiKeyIndex = (apiKeyIndex + 1) % totalKeys;
