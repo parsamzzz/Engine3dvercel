@@ -5,13 +5,11 @@ const router = express.Router();
 
 // 🔐 کلیدهای API گوگل
 const API_KEYS = [
-  'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
-  'AIzaSyAmDnnMUYcv6QMt-fhF0YHdRzD4x2qDwqg',
-  'AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE',
-  'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA',
+  
+ 
   'AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0',
   'AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc',
-  'AIzaSyDqXmdk8a3euOrvH-FTsSmUA0BP6wfPPIk',
+ 
   'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
   'AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI',
   'AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y',
