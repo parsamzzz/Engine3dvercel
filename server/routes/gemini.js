@@ -8,8 +8,13 @@ const upload = multer();
 
 // 🔐 کلیدهای ثابت و امنیتی
 const API_KEYS = [
+  'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
+  'AIzaSyAmDnnMUYcv6QMt-fhF0YHdRzD4x2qDwqg',
+  'AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE',
+  'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA',
   'AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0',
   'AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc',
+  'AIzaSyDqXmdk8a3euOrvH-FTsSmUA0BP6wfPPIk',
   'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
   'AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI',
   'AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y',
@@ -21,7 +26,9 @@ const API_KEYS = [
   'AIzaSyARk8SUMKga6uXMt6v-FWtGdlo6arfgtUM',
   'AIzaSyAXGxErlDP7gEZ5nWCxDl3V0Tu5Poo6AzQ',
   'AIzaSyAzweAy_UzoquW2EMJ7n6mzSe-EUQZ7GCk',
-  'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY'
+  'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY',
+  'AIzaSyA-MtzXcddrH6ShV_y6hZ7fncpxy0d5JO4',
+'AIzaSyARi1ijMaLk5bQkJg08UCd0G7DcIJCtiIA'
 ];
 
 const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
@@ -53,12 +60,12 @@ router.post('/', upload.single('image'), async (req, res, next) => {
     const base64Image = imageBuffer.toString('base64');
     const totalKeys = API_KEYS.length;
 
+    // حلقه‌ای برای استفاده از کلیدها به ترتیب
     for (let i = 0; i < totalKeys; i++) {
-      const currentKeyIndex = (apiKeyIndex + i) % totalKeys;
-      const key = API_KEYS[currentKeyIndex];
+      const currentKey = API_KEYS[(apiKeyIndex + i) % totalKeys];  // تعیین کلید کنونی
 
       try {
-        const ai = new GoogleGenAI({ apiKey: key });
+        const ai = new GoogleGenAI({ apiKey: currentKey });
 
         const response = await ai.models.generateContent({
           model: 'gemini-2.0-flash-preview-image-generation',
@@ -83,9 +90,10 @@ router.post('/', upload.single('image'), async (req, res, next) => {
 
         if (imagePart && imagePart.inlineData?.data) {
           const base64 = imagePart.inlineData.data;
-          console.log(`✅ تصویر تولید شد با کلید: ${key.substring(0, 10)}...`);
+          console.log(`✅ تصویر تولید شد با کلید: ${currentKey.substring(0, 10)}...`);
 
-          apiKeyIndex = (currentKeyIndex + 1) % totalKeys;
+          // کلید را به بعدی تغییر می‌دهیم
+          apiKeyIndex = (apiKeyIndex + 1) % totalKeys;
 
           return res.json({ base64 });
         } else {
@@ -96,7 +104,7 @@ router.post('/', upload.single('image'), async (req, res, next) => {
           });
         }
       } catch (err) {
-        console.error(`❌ Key ${key.substring(0, 15)}... با خطا مواجه شد:`, err.message);
+        console.error(`❌ Key ${currentKey.substring(0, 15)}... با خطا مواجه شد:`, err.message);
         if (err.response?.data?.error?.message) {
           console.error('جزئیات خطای API:', err.response.data.error.message);
         }

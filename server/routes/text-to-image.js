@@ -4,8 +4,13 @@ import { GoogleGenAI, Modality } from "@google/genai";
 const router = express.Router();
 
 const API_KEYS = [
+  'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
+  'AIzaSyAmDnnMUYcv6QMt-fhF0YHdRzD4x2qDwqg',
+  'AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE',
+  'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA',
   'AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0',
   'AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc',
+  'AIzaSyDqXmdk8a3euOrvH-FTsSmUA0BP6wfPPIk',
   'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
   'AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI',
   'AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y',
@@ -17,7 +22,9 @@ const API_KEYS = [
   'AIzaSyARk8SUMKga6uXMt6v-FWtGdlo6arfgtUM',
   'AIzaSyAXGxErlDP7gEZ5nWCxDl3V0Tu5Poo6AzQ',
   'AIzaSyAzweAy_UzoquW2EMJ7n6mzSe-EUQZ7GCk',
-  'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY'
+  'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY',
+    'AIzaSyA-MtzXcddrH6ShV_y6hZ7fncpxy0d5JO4',
+'AIzaSyARi1ijMaLk5bQkJg08UCd0G7DcIJCtiIA'
 ];
 
 const PRIVATE_KEY = "threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD";
@@ -37,9 +44,10 @@ router.post("/", async (req, res, next) => {
     }
 
     const totalKeys = API_KEYS.length;
+    let isSuccessful = false; // نشان‌دهنده موفقیت یا شکست درخواست
 
-    for (let i = 0; i < totalKeys; i++) {
-      const currentKeyIndex = (apiKeyIndex + i) % totalKeys;
+    while (!isSuccessful) {
+      const currentKeyIndex = apiKeyIndex % totalKeys;
       const key = API_KEYS[currentKeyIndex];
 
       try {
@@ -62,21 +70,22 @@ router.post("/", async (req, res, next) => {
           const base64 = imagePart.inlineData.data;
           const mimeType = imagePart.inlineData.mimeType;
 
+          // به کلید بعدی برای درخواست‌های بعدی برویم
           apiKeyIndex = (currentKeyIndex + 1) % totalKeys;
 
           return res.json({ base64, mimeType });
         } else {
-          return res.status(200).json({
-            message: "درخواست پردازش شد، اما تصویری تولید نشد.",
-            parts,
-          });
+          console.warn("⚠️ تصویری تولید نشد.");
         }
       } catch (err) {
         console.error(
-          `خطا در کلید ${key.substring(0, 15)}... :`,
+          `❌ خطا در کلید ${key.substring(0, 15)}... :`,
           err.message
         );
       }
+
+      // اگر با کلید فعلی موفق نبود، به کلید بعدی می‌رود
+      apiKeyIndex = (currentKeyIndex + 1) % totalKeys;
     }
 
     return res.status(500).json({
@@ -87,6 +96,7 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+// مدیریت خطا
 router.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "خطای سرور." });
