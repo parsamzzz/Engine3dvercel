@@ -22,8 +22,17 @@ const API_KEYS = [
   'AIzaSyARk8SUMKga6uXMt6v-FWtGdlo6arfgtUM',
   'AIzaSyAXGxErlDP7gEZ5nWCxDl3V0Tu5Poo6AzQ',
   'AIzaSyAzweAy_UzoquW2EMJ7n6mzSe-EUQZ7GCk',
-  'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY'
+  'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY',
+  'AIzaSyBrYNNtwbvgky0rdEDyVzGGCTKXgH5Bsp8',
+  'AIzaSyA-MtzXcddrH6ShV_y6hZ7fncpxy0d5JO4',
+  'AIzaSyARi1ijMaLk5bQkJg08UCd0G7DcIJCtiIA',
+  'AIzaSyD1QDm9kNrIi3cbNkEvkTTZTD4KQSh-Io0',
+  'AIzaSyCki2DcqBZh5_5hJ1VmdKzK5VkvDStM9Ic',
+  'AIzaSyC8Jn0bF7FPzO4UHcArQzYMoj_v8vPu1OY',
+  'AIzaSyARHMDI6gJr77QePCbUne6G4U6VhC6caRI',
+  'AIzaSyCG0e6OkV7RZ9xf9doYQgFMlZ_evHNZx4M'
 ];
+
 
 const PRIVATE_KEY = "threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD";
 
