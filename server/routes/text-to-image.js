@@ -30,7 +30,9 @@ const API_KEYS = [
   'AIzaSyCki2DcqBZh5_5hJ1VmdKzK5VkvDStM9Ic',
   'AIzaSyC8Jn0bF7FPzO4UHcArQzYMoj_v8vPu1OY',
   'AIzaSyARHMDI6gJr77QePCbUne6G4U6VhC6caRI',
-  'AIzaSyCG0e6OkV7RZ9xf9doYQgFMlZ_evHNZx4M'
+  'AIzaSyCG0e6OkV7RZ9xf9doYQgFMlZ_evHNZx4M',
+  'AIzaSyCVSP1ybV1M-X-Q9GLk2ILbtsvyHtbunyM',
+'AIzaSyDosaNhOnxVx2B4AwxjfI_O3gjJL6SqVPI'
 ];
 
 
