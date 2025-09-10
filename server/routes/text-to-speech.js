@@ -5,35 +5,16 @@ const router = express.Router();
 
 // 🔐 کلیدهای API گوگل
 const API_KEYS = [
-  'AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g',
-  'AIzaSyAmDnnMUYcv6QMt-fhF0YHdRzD4x2qDwqg',
-  'AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE',
-  'AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA',
-  'AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0',
-  'AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc',
-  'AIzaSyDqXmdk8a3euOrvH-FTsSmUA0BP6wfPPIk',
-  'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
-  'AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI',
-  'AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y',
-  'AIzaSyDAqLei5_h4y5Vg1qVSKvdbbLiHQrGfjX4',
-  'AIzaSyADOgOBfQT1U-bRQAxXscq4sPqJJlEz4_0',
-  'AIzaSyAZk5FE4XUx14SEH9n8wy6rh0PbVOM_e0o',
-  'AIzaSyBQ_yRx5w6bmhnYpeKqFGnWBwdtWoGFTgc',
-  'AIzaSyBD5V0Y0BYKFUIFvbnmi46IFuh5y-ibSdA',
-  'AIzaSyARk8SUMKga6uXMt6v-FWtGdlo6arfgtUM',
-  'AIzaSyAXGxErlDP7gEZ5nWCxDl3V0Tu5Poo6AzQ',
-  'AIzaSyAzweAy_UzoquW2EMJ7n6mzSe-EUQZ7GCk',
-  'AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY',
-  'AIzaSyBrYNNtwbvgky0rdEDyVzGGCTKXgH5Bsp8',
-  'AIzaSyA-MtzXcddrH6ShV_y6hZ7fncpxy0d5JO4',
-  'AIzaSyARi1ijMaLk5bQkJg08UCd0G7DcIJCtiIA',
-  'AIzaSyD1QDm9kNrIi3cbNkEvkTTZTD4KQSh-Io0',
-  'AIzaSyCki2DcqBZh5_5hJ1VmdKzK5VkvDStM9Ic',
-  'AIzaSyC8Jn0bF7FPzO4UHcArQzYMoj_v8vPu1OY',
-  'AIzaSyARHMDI6gJr77QePCbUne6G4U6VhC6caRI',
-  'AIzaSyCG0e6OkV7RZ9xf9doYQgFMlZ_evHNZx4M',
   'AIzaSyCVSP1ybV1M-X-Q9GLk2ILbtsvyHtbunyM',
-'AIzaSyDosaNhOnxVx2B4AwxjfI_O3gjJL6SqVPI'
+'AIzaSyDosaNhOnxVx2B4AwxjfI_O3gjJL6SqVPI',
+'AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0',
+'AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQK',
+'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
+'AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y',
+'AIzaSyBrYNNtwbvgky0rdEDyVzGGCTKXgH5Bsp8'
+
+
+
 ];
 
 // 🛡 کلید خصوصی کلاینت
