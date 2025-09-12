@@ -7,13 +7,7 @@ const router = express.Router();
 const upload = multer();
 
 const API_KEYS = [
-'AIzaSyCVSP1ybV1M-X-Q9GLk2ILbtsvyHtbunyM',
-'AIzaSyDosaNhOnxVx2B4AwxjfI_O3gjJL6SqVPI',
-'AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0',
 
-'AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ',
-'AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y',
-'AIzaSyBrYNNtwbvgky0rdEDyVzGGCTKXgH5Bsp8',
 'AIzaSyDPBqZlc3nVhETPPpBI49Ov8hLzwpi3PKg',
 'AIzaSyDiDSuUQzXOUdUK0RMGflQG1V62FWySvD0',
 'AIzaSyB20bDSlzPbJVkVJf1_ogIbline3gB32LQ',
