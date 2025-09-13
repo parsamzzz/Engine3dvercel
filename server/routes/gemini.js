@@ -14,7 +14,9 @@ const API_KEYS = [
 'AIzaSyA73WazXgApiGxxNIUkNLS6HH58FwnytlY',
 'AIzaSyD9Kw0CvNCbvHB8EL0LCMI1N-fIwdnwDiY',
 'AIzaSyBn1Fm_OtU0cWxo4MkpnrDyBJn9HXlwABQ',
-'AIzaSyDGBqiqsW9U1mivsAwh5vMU0ZARP8E-uvM'
+'AIzaSyDGBqiqsW9U1mivsAwh5vMU0ZARP8E-uvM',
+'AIzaSyCa_2ERS8aAM5pKFa1xOhwsyJ_IpXxmEdU',
+'AIzaSyB-bI0yLJG7U5jtBRpYqMsSZdvwkWpHcSE'
 ];
 
 const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
