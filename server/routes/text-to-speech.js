@@ -7,7 +7,6 @@ const router = express.Router();
 const API_KEYS = [
 
 
-'AIzaSyA73WazXgApiGxxNIUkNLS6HH58FwnytlY',
 'AIzaSyBn1Fm_OtU0cWxo4MkpnrDyBJn9HXlwABQ',
 'AIzaSyDGBqiqsW9U1mivsAwh5vMU0ZARP8E-uvM',
 'AIzaSyCa_2ERS8aAM5pKFa1xOhwsyJ_IpXxmEdU',
