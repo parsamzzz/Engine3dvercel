@@ -64,7 +64,7 @@ router.post('/multi-image', upload.array('images', 3), async (req, res, next) =>
         const ai = new GoogleGenAI({ apiKey: key });
 
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image-preview',
+          model: 'gemini-2.0-flash-preview-image-generation',
           contents: [
             { text: prompt },
             ...imageContents
