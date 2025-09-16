@@ -13,7 +13,6 @@ const API_KEYS = [
 
 
 'AIzaSyCsMSgT_VWOLJRaxDoWHiteKuZm23JtrJM',
-'AIzaSyANSaxkxwQrGUNT6zkAjvemsRSxNe2eyok',
 'AIzaSyCoN49vCB-p1pNzkoP0i1P6tGBBgBQMRV4',
 'AIzaSyADOgOBfQT1U-bRQAxXscq4sPqJJlEz4_0'
 
