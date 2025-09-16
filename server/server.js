@@ -8,6 +8,7 @@ import axios from 'axios';
 import geminiImageRoute from './routes/gemini.js';
 import textToImageRouter from './routes/text-to-image.js';
 import textToSpeechRoute from './routes/text-to-speech.js';
+import gemini2Router from './routes/gemini2.js';
 
 dotenv.config();
 
@@ -32,6 +33,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/gemini-image', geminiImageRoute);
 app.use('/api/text-to-image', textToImageRouter);
 app.use('/api/text-to-speech', textToSpeechRoute);
+app.use('/api/gemini2', gemini2Router);
+
 
 const BASE_PROMPT = `
 🤖 شما دستیار رسمی سایت تریدیفای (Threedify.org) هستید. فرض بر این است که کاربر وارد حساب کاربری شده و داخل داشبورد است. برای نسخه انگلیسی سایت، از دامنه https://en.threedify.org استفاده کنید.
