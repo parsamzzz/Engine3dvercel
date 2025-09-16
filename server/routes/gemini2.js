@@ -8,6 +8,8 @@ const upload = multer();
 
 const API_KEYS = [
   'AIzaSyCsMSgT_VWOLJRaxDoWHiteKuZm23JtrJM',
+  'AIzaSyCoN49vCB-p1pNzkoP0i1P6tGBBgBQMRV4',
+'AIzaSyADOgOBfQT1U-bRQAxXscq4sPqJJlEz4_0',
   'AIzaSyDiDSuUQzXOUdUK0RMGflQG1V62FWySvD0',
   'AIzaSyB20bDSlzPbJVkVJf1_ogIbline3gB32LQ',
   'AIzaSyA73WazXgApiGxxNIUkNLS6HH58FwnytlY',

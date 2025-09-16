@@ -16,7 +16,9 @@ const API_KEYS = [
 'AIzaSyB-bI0yLJG7U5jtBRpYqMsSZdvwkWpHcSE',
 'AIzaSyCvPUJ7zLFWJIzVw9UD3voAY9FJXTXAcD4',
 'AIzaSyCsMSgT_VWOLJRaxDoWHiteKuZm23JtrJM',
-'AIzaSyANSaxkxwQrGUNT6zkAjvemsRSxNe2eyok'
+'AIzaSyANSaxkxwQrGUNT6zkAjvemsRSxNe2eyok',
+'AIzaSyCoN49vCB-p1pNzkoP0i1P6tGBBgBQMRV4',
+'AIzaSyADOgOBfQT1U-bRQAxXscq4sPqJJlEz4_0'
 
 ];
 
