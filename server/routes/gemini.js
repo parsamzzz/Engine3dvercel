@@ -7,8 +7,48 @@ const router = express.Router();
 const upload = multer();
 
 const API_KEYS = [
+  "AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g",
+  "AIzaSyAmDnnMUYcv6QMt-fhF0YHdRzD4x2qDwqg",
+  "AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE",
+  "AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA",
+  "AIzaSyCoN49vCB-p1pNzkoP0i1P6tGBBgBQMRV4",
+  "AIzaSyADOgOBfQT1U-bRQAxXscq4sPqJJlEz4_0",
+  "AIzaSyBn1Fm_OtU0cWxo4MkpnrDyBJn9HXlwABQ",
+  "AIzaSyDGBqiqsW9U1mivsAwh5vMU0ZARP8E-uvM",
+  "AIzaSyCa_2ERS8aAM5pKFa1xOhwsyJ_IpXxmEdU",
+  "AIzaSyB-bI0yLJG7U5jtBRpYqMsSZdvwkWpHcSE",
+  "AIzaSyCvPUJ7zLFWJIzVw9UD3voAY9FJXTXAcD4",
+  "AIzaSyDiDSuUQzXOUdUK0RMGflQG1V62FWySvD0",
+  "AIzaSyB20bDSlzPbJVkVJf1_ogIbline3gB32LQ",
+  "AIzaSyA73WazXgApiGxxNIUkNLS6HH58FwnytlY",
+  "AIzaSyD9Kw0CvNCbvHB8EL0LCMI1N-fIwdnwDiY",
+  "AIzaSyCsMSgT_VWOLJRaxDoWHiteKuZm23JtrJM",
+  "AIzaSyANSaxkxwQrGUNT6zkAjvemsRSxNe2eyok",
+  "AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0",
+  "AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc",
+  "AIzaSyDqXmdk8a3euOrvH-FTsSmUA0BP6wfPPIk",
+  "AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ",
+  "AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI",
+  "AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y",
+  "AIzaSyDAqLei5_h4y5Vg1qVSKvdbbLiHQrGfjX4",
+  "AIzaSyAZk5FE4XUx14SEH9n8wy6rh0PbVOM_e0o",
+  "AIzaSyBQ_yRx5w6bmhnYpeKqFGnWBwdtWoGFTgc",
+  "AIzaSyBD5V0Y0BYKFUIFvbnmi46IFuh5y-ibSdA",
+  "AIzaSyARk8SUMKga6uXMt6v-FWtGdlo6arfgtUM",
+  "AIzaSyAXGxErlDP7gEZ5nWCxDl3V0Tu5Poo6AzQ",
+  "AIzaSyAzweAy_UzoquW2EMJ7n6mzSe-EUQZ7GCk",
+  "AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY",
+  "AIzaSyBrYNNtwbvgky0rdEDyVzGGCTKXgH5Bsp8",
+  "AIzaSyA-MtzXcddrH6ShV_y6hZ7fncpxy0d5JO4",
+  "AIzaSyARi1ijMaLk5bQkJg08UCd0G7DcIJCtiIA",
+  "AIzaSyD1QDm9kNrIi3cbNkEvkTTZTD4KQSh-Io0",
+  "AIzaSyCki2DcqBZh5_5hJ1VmdKzK5VkvDStM9Ic",
+  "AIzaSyC8Jn0bF7FPzO4UHcArQzYMoj_v8vPu1OY",
+  "AIzaSyARHMDI6gJr77QePCbUne6G4U6VhC6caRI",
+  "AIzaSyCG0e6OkV7RZ9xf9doYQgFMlZ_evHNZx4M",
   'AIzaSyALL4vcUd3Kgk17OCNTt75H5VErcwvDxUc'
 ];
+
 
 
 const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
