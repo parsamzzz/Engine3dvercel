@@ -117,14 +117,18 @@ async function handleRequest(req, res, next) {
   const totalKeys = API_KEYS.length;
   let triedKeys = 0;
 
+  console.info(`🔹 پردازش درخواست جدید. prompt: "${prompt.substring(0, 50)}..."`);
+
   while (triedKeys < totalKeys) {
     const keyData = getNextAvailableKey();
     if (!keyData) {
+      console.warn('⏳ هیچ کلید فعالی در دسترس نیست، کمی صبر می‌کنیم...');
       await new Promise(r => setTimeout(r, 100));
       continue;
     }
 
     const { key, idx } = keyData;
+    console.info(`🗝️ استفاده از کلید: ${key.substring(0, 10)}...`);
 
     try {
       const ai = new GoogleGenAI({ apiKey: key });
@@ -139,14 +143,18 @@ async function handleRequest(req, res, next) {
       keyState[idx].inUse = false;
 
       if (imagePart?.inlineData?.data) {
+        console.info(`✅ تصویر تولید شد با کلید: ${key.substring(0, 10)}...`);
         return res.json({ base64: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType });
       } else {
+        console.warn('⚠️ تصویری در پاسخ Gemini پیدا نشد.');
         return res.status(200).json({ message: 'درخواست پردازش شد، اما تصویری تولید نشد.', parts });
       }
     } catch (err) {
       keyState[idx].inUse = false;
+      console.error(`❌ خطا در کلید ${key.substring(0, 10)}...:`, err.message);
       if (err.message.includes('429')) {
         keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; // 1 ساعت
+        console.warn(`⏳ کلید ${key.substring(0, 10)}... در حالت cooldown قرار گرفت.`);
         triedKeys++;
         continue;
       }
@@ -154,27 +162,32 @@ async function handleRequest(req, res, next) {
     }
   }
 
+  console.error('❌ هیچ‌کدام از کلیدها موفق نشد.');
   res.status(503).json({ error: 'هیچ‌کدام از کلیدها موفق نشد.' });
 }
 
 // =====================
-// مسیر POST چند تصویر
+// مسیر POST چند تصویر با لاگ
 // =====================
 router.post('/multi-image', upload.array('images', 3), (req, res, next) => {
   const clientKey = req.headers['x-api-key'];
   if (!clientKey || clientKey !== PRIVATE_KEY) {
+    console.warn('🛑 دسترسی غیرمجاز.');
     return res.status(403).json({ error: '⛔ دسترسی غیرمجاز.' });
   }
 
   const { prompt } = req.body;
   if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
+    console.warn('⚠️ prompt معتبر نیست.');
     return res.status(400).json({ error: '⛔ prompt معتبر نیست.' });
   }
 
   if (!req.files || !req.files.length) {
+    console.warn('⚠️ تصاویر آپلود نشده‌اند.');
     return res.status(400).json({ error: '⛔ تصاویر آپلود نشده‌اند.' });
   }
 
+  console.info('➡️ درخواست به صف اضافه شد.');
   requestQueue.push({ req, res, next });
   processQueue();
 });

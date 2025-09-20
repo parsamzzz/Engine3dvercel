@@ -70,7 +70,7 @@ const requestQueue = [];
 let processingQueue = false;
 
 // =====================
-// 📌 انتخاب کلید سالم
+// 📌 انتخاب کلید سالم با لاگ
 // =====================
 function getNextAvailableKey() {
   const totalKeys = API_KEYS.length;
@@ -80,18 +80,22 @@ function getNextAvailableKey() {
     if (!state.inUse && Date.now() > state.cooldownUntil) {
       apiKeyIndex = (idx + 1) % totalKeys;
       state.inUse = true;
+      console.info(`🗝️ کلید انتخاب شد: ${keyState[idx].key?.substring(0,10) || 'hidden'} (index: ${idx})`);
       return { key: API_KEYS[idx], idx };
     }
   }
+  console.warn("⏳ هیچ کلید فعالی در دسترس نیست.");
   return null;
 }
 
 // =====================
-// 📌 پردازش صف
+// 📌 پردازش صف با لاگ
 // =====================
 async function processQueue() {
   if (processingQueue) return;
   processingQueue = true;
+
+  console.info(`➡️ شروع پردازش صف، طول صف: ${requestQueue.length}`);
 
   while (requestQueue.length > 0) {
     const { req, res, next } = requestQueue.shift();
@@ -103,24 +107,29 @@ async function processQueue() {
   }
 
   processingQueue = false;
+  console.info("✅ پردازش صف به اتمام رسید.");
 }
 
 // =====================
-// 📌 پردازش درخواست
+// 📌 پردازش درخواست با لاگ کامل
 // =====================
 async function handleRequest(req, res, next) {
   const { prompt } = req.body;
+  console.info(`✉️ دریافت درخواست با prompt: "${prompt.substring(0,50)}..."`);
+
   const totalKeys = API_KEYS.length;
   let triedKeys = 0;
 
   while (triedKeys < totalKeys) {
     const keyData = getNextAvailableKey();
     if (!keyData) {
+      console.info("⏳ منتظر آزاد شدن کلید...");
       await new Promise(r => setTimeout(r, 100));
       continue;
     }
 
     const { key, idx } = keyData;
+    console.info(`🔑 استفاده از کلید index ${idx}`);
 
     try {
       const ai = new GoogleGenAI({ apiKey: key });
@@ -136,43 +145,55 @@ async function handleRequest(req, res, next) {
       keyState[idx].inUse = false;
 
       if (imagePart?.inlineData?.data) {
+        console.info(`✅ تصویر با موفقیت تولید شد با کلید index ${idx}`);
         return res.json({ base64: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType });
       } else {
+        console.warn(`⚠️ درخواست پردازش شد اما تصویری تولید نشد. index ${idx}`);
         return res.status(200).json({ message: "درخواست پردازش شد، اما تصویری تولید نشد.", parts });
       }
     } catch (err) {
       keyState[idx].inUse = false;
+      console.error(`❌ خطا در کلید index ${idx}:`, err.message);
+
       if (err.message.includes("429")) {
-        keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; // 1 ساعت
+        keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000;
+        console.warn(`⏳ کلید index ${idx} در cooldown به مدت 1 ساعت قرار گرفت.`);
         triedKeys++;
         continue;
       }
+
       return next(err);
     }
   }
 
+  console.error("❌ هیچ‌کدام از کلیدها موفق نشد.");
   res.status(503).json({ error: "هیچ‌کدام از کلیدها موفق نشد." });
 }
 
 // =====================
-// 📌 مسیر POST
+// 📌 مسیر POST با صف
 // =====================
 router.post("/", (req, res, next) => {
   const clientKey = req.headers["x-api-key"];
   if (!clientKey || clientKey !== PRIVATE_KEY) {
+    console.warn("⛔ دسترسی غیرمجاز");
     return res.status(403).json({ error: "⛔ دسترسی غیرمجاز." });
   }
 
   const { prompt } = req.body;
   if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
+    console.warn("⛔ prompt معتبر نیست");
     return res.status(400).json({ error: "⛔ prompt معتبر نیست." });
   }
 
+  console.info(`📝 درخواست به صف اضافه شد. طول صف: ${requestQueue.length + 1}`);
   requestQueue.push({ req, res, next });
   processQueue();
 });
 
+// =====================
 // مدیریت خطا
+// =====================
 router.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "خطای سرور." });
