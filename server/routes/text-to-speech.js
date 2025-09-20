@@ -3,6 +3,9 @@ import { GoogleGenAI, Modality } from '@google/genai';
 
 const router = express.Router();
 
+// =====================
+// 🔑 همه کلیدها
+// =====================
 const API_KEYS = [
   "AIzaSyBRLO9BrEuF5Psn9HzVIgM5t7r4BhfytW0",
   "AIzaSyAtegVVBwMLCH1lgpYaXpV4xevbhZFpy94",
@@ -55,97 +58,135 @@ const API_KEYS = [
   "AIzaSyALL4vcUd3Kgk17OCNTt75H5VErcwvDxUc"
 ];
 
-
-
+// =====================
 // 🛡 کلید خصوصی کلاینت
+// =====================
 const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
+
+// وضعیت کلیدها
+const keyState = API_KEYS.map(() => ({ cooldownUntil: 0, inUse: false }));
 let apiKeyIndex = 0;
 
-router.post('/', async (req, res, next) => {
-  try {
-    const clientKey = req.headers['x-api-key'];
-    if (!clientKey || clientKey !== PRIVATE_KEY) {
-      return res.status(403).json({ error: 'Unauthorized' });
+// صف درخواست‌ها
+const requestQueue = [];
+let processingQueue = false;
+
+// =====================
+// 📌 انتخاب کلید سالم
+// =====================
+function getNextAvailableKey() {
+  const totalKeys = API_KEYS.length;
+  for (let i = 0; i < totalKeys; i++) {
+    const idx = (apiKeyIndex + i) % totalKeys;
+    const state = keyState[idx];
+    if (!state.inUse && Date.now() > state.cooldownUntil) {
+      apiKeyIndex = (idx + 1) % totalKeys;
+      state.inUse = true;
+      return { key: API_KEYS[idx], idx };
     }
-
-    const { text, multiSpeaker, voiceName } = req.body;
-    // text: رشته متنی برای تبدیل به صدا
-    // multiSpeaker: آرایه یا آبجکت برای چند گوینده (اختیاری)
-    // voiceName: نام صدای انتخاب شده برای حالت تک‌گوینده (اختیاری)
-
-    if (!text || typeof text !== 'string' || text.trim() === '') {
-      return res.status(400).json({ error: 'text معتبر نیست.' });
-    }
-
-    const totalKeys = API_KEYS.length;
-
-    for (let i = 0; i < totalKeys; i++) {
-      const currentKeyIndex = (apiKeyIndex + i) % totalKeys;
-      const key = API_KEYS[currentKeyIndex];
-
-      try {
-        const ai = new GoogleGenAI({ apiKey: key });
-
-        let speechConfig = {};
-
-        if (multiSpeaker && Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
-          // حالت چندگوینده
-          speechConfig = {
-            multiSpeakerVoiceConfig: {
-              speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
-                speaker,
-                voiceConfig: {
-                  prebuiltVoiceConfig: {
-                    voiceName: voiceName || 'Kore',
-                  },
-                },
-              })),
-            },
-          };
-        } else {
-          // حالت تک‌گوینده: استفاده از voiceName ارسالی یا پیش‌فرض 'Kore'
-          speechConfig = {
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName: voiceName || 'Kore',
-              },
-            },
-          };
-        }
-
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-preview-tts',
-          contents: [{ parts: [{ text }] }],
-          config: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig,
-          },
-        });
-
-        const parts = response.candidates?.[0]?.content?.parts || [];
-        const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
-
-        if (audioPart?.inlineData?.data) {
-          const base64 = audioPart.inlineData.data;
-          const mimeType = audioPart.inlineData.mimeType;
-
-          apiKeyIndex = (currentKeyIndex + 1) % totalKeys;
-
-          console.log(`✅ صوت تولید شد با کلید: ${key.substring(0, 10)}...`);
-          return res.json({ base64, mimeType });
-        } else {
-          console.warn('⚠️ صوتی در پاسخ Gemini پیدا نشد.');
-          return res.status(200).json({ message: 'صوتی تولید نشد.', parts });
-        }
-      } catch (err) {
-        console.error(`❌ خطا با کلید ${key.substring(0, 15)}:`, err.message);
-      }
-    }
-
-    res.status(500).json({ error: 'هیچ‌کدام از کلیدها موفق نشد.' });
-  } catch (err) {
-    next(err);
   }
+  return null;
+}
+
+// =====================
+// 📌 پردازش صف
+// =====================
+async function processQueue() {
+  if (processingQueue) return;
+  processingQueue = true;
+
+  while (requestQueue.length > 0) {
+    const { req, res, next } = requestQueue.shift();
+    try {
+      await handleRequest(req, res, next);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  processingQueue = false;
+}
+
+// =====================
+// 📌 تابع اصلی درخواست
+// =====================
+async function handleRequest(req, res, next) {
+  const { text, multiSpeaker, voiceName } = req.body;
+  const totalKeys = API_KEYS.length;
+  let triedKeys = 0;
+
+  while (triedKeys < totalKeys) {
+    const keyData = getNextAvailableKey();
+    if (!keyData) {
+      await new Promise(r => setTimeout(r, 100)); // کمی صبر کن و دوباره امتحان کن
+      continue;
+    }
+
+    const { key, idx } = keyData;
+
+    try {
+      let speechConfig = {};
+      if (multiSpeaker && Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
+        speechConfig = {
+          multiSpeakerVoiceConfig: {
+            speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
+              speaker,
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } }
+            }))
+          }
+        };
+      } else {
+        speechConfig = { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } } };
+      }
+
+      const ai = new GoogleGenAI({ apiKey: key });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-preview-tts',
+        contents: [{ parts: [{ text }] }],
+        config: { responseModalities: [Modality.AUDIO], speechConfig }
+      });
+
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
+
+      keyState[idx].inUse = false;
+
+      if (audioPart?.inlineData?.data) {
+        return res.json({ base64: audioPart.inlineData.data, mimeType: audioPart.inlineData.mimeType });
+      } else {
+        return res.status(200).json({ message: 'صوتی تولید نشد.', parts });
+      }
+
+    } catch (err) {
+      keyState[idx].inUse = false;
+      if (err.message.includes('429')) {
+        keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; // 1 ساعت
+        triedKeys++;
+        continue;
+      }
+      return next(err);
+    }
+  }
+
+  res.status(503).json({ error: 'هیچ‌کدام از کلیدها موفق نشد.' });
+}
+
+// =====================
+// 📌 مسیر POST
+// =====================
+router.post('/', (req, res, next) => {
+  const clientKey = req.headers['x-api-key'];
+  if (!clientKey || clientKey !== PRIVATE_KEY) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  const { text } = req.body;
+  if (!text || typeof text !== 'string' || text.trim() === '') {
+    return res.status(400).json({ error: 'text معتبر نیست.' });
+  }
+
+  requestQueue.push({ req, res, next });
+  processQueue();
 });
 
 // مدیریت خطا

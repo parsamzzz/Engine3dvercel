@@ -6,6 +6,9 @@ import { GoogleGenAI, Modality } from '@google/genai';
 const router = express.Router();
 const upload = multer();
 
+// =====================
+// 🔑 همه کلیدها
+// =====================
 const API_KEYS = [
   "AIzaSyBRLO9BrEuF5Psn9HzVIgM5t7r4BhfytW0",
   "AIzaSyAtegVVBwMLCH1lgpYaXpV4xevbhZFpy94",
@@ -58,91 +61,122 @@ const API_KEYS = [
   "AIzaSyALL4vcUd3Kgk17OCNTt75H5VErcwvDxUc"
 ];
 
-
+// =====================
+// 🛡 کلید خصوصی کلاینت
+// =====================
 const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
 let apiKeyIndex = 0;
 
-// 📌 مسیر جدید: multi-image
-router.post('/multi-image', upload.array('images', 3), async (req, res, next) => {
-  try {
-    const clientKey = req.headers['x-api-key'];
-    if (!clientKey || clientKey !== PRIVATE_KEY) {
-      console.warn('🛑 دسترسی غیرمجاز.');
-      return res.status(403).json({ error: 'Unauthorized' });
+// =====================
+// مدیریت کلیدها و صف
+// =====================
+const keyState = API_KEYS.map(() => ({ cooldownUntil: 0, inUse: false }));
+const requestQueue = [];
+let processingQueue = false;
+
+function getNextAvailableKey() {
+  const totalKeys = API_KEYS.length;
+  for (let i = 0; i < totalKeys; i++) {
+    const idx = (apiKeyIndex + i) % totalKeys;
+    const state = keyState[idx];
+    if (!state.inUse && Date.now() > state.cooldownUntil) {
+      apiKeyIndex = (idx + 1) % totalKeys;
+      state.inUse = true;
+      return { key: API_KEYS[idx], idx };
     }
-
-    const prompt = req.body.prompt;
-    const files = req.files;
-
-    if (!prompt || !files?.length) {
-      return res.status(400).json({ error: 'prompt یا تصاویر ارسال نشده.' });
-    }
-
-    const imageContents = [];
-    for (const file of files) {
-      const originalName = file.originalname;
-      const mimeType = mime.lookup(originalName) || file.mimetype;
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
-        return res.status(415).json({ error: `فرمت ${mimeType} پشتیبانی نمی‌شود.` });
-      }
-
-      const base64Image = file.buffer.toString('base64');
-      imageContents.push({
-        inlineData: { mimeType, data: base64Image }
-      });
-    }
-
-    const totalKeys = API_KEYS.length;
-
-    for (let i = 0; i < totalKeys; i++) {
-      const currentKeyIndex = (apiKeyIndex + i) % totalKeys;
-      const key = API_KEYS[currentKeyIndex];
-
-      try {
-        const ai = new GoogleGenAI({ apiKey: key });
-
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.0-flash-preview-image-generation',
-          contents: [
-            { text: prompt },
-            ...imageContents
-          ],
-          config: {
-            responseModalities: [Modality.TEXT, Modality.IMAGE],
-          },
-        });
-
-        const parts = response.candidates?.[0]?.content?.parts || [];
-        const imagePart = parts.find(part =>
-          part.inlineData?.mimeType?.startsWith('image/')
-        );
-
-        if (imagePart && imagePart.inlineData?.data) {
-          const base64 = imagePart.inlineData.data;
-          console.log(`✅ تصویر تولید شد با کلید: ${key.substring(0, 10)}...`);
-
-          apiKeyIndex = (currentKeyIndex + 1) % totalKeys;
-
-          return res.json({ base64 });
-        } else {
-          console.warn('⚠️ تصویری در پاسخ Gemini پیدا نشد.');
-          return res.status(200).json({
-            message: 'درخواست با موفقیت پردازش شد، اما تصویری تولید نشد.',
-            parts,
-          });
-        }
-      } catch (err) {
-        console.error(`❌ Key ${key.substring(0, 15)}... با خطا مواجه شد:`, err.message);
-        if (err.response?.data?.error?.message) {
-          console.error('جزئیات خطای API:', err.response.data.error.message);
-        }
-      }
-    }
-
-    res.status(500).json({ error: 'هیچ‌کدام از کلیدهای Gemini موفق نبودند یا تصویری تولید نشد.' });
-  } catch (err) {
-    next(err);
   }
+  return null;
+}
+
+async function processQueue() {
+  if (processingQueue) return;
+  processingQueue = true;
+
+  while (requestQueue.length > 0) {
+    const { req, res, next } = requestQueue.shift();
+    try {
+      await handleRequest(req, res, next);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  processingQueue = false;
+}
+
+async function handleRequest(req, res, next) {
+  const { prompt } = req.body;
+  const files = req.files;
+  const imageContents = files.map(file => ({
+    inlineData: {
+      mimeType: mime.lookup(file.originalname) || file.mimetype,
+      data: file.buffer.toString('base64')
+    }
+  }));
+
+  const totalKeys = API_KEYS.length;
+  let triedKeys = 0;
+
+  while (triedKeys < totalKeys) {
+    const keyData = getNextAvailableKey();
+    if (!keyData) {
+      await new Promise(r => setTimeout(r, 100));
+      continue;
+    }
+
+    const { key, idx } = keyData;
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: key });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-preview-image-generation',
+        contents: [{ text: prompt }, ...imageContents],
+        config: { responseModalities: [Modality.TEXT, Modality.IMAGE] }
+      });
+
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      const imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
+      keyState[idx].inUse = false;
+
+      if (imagePart?.inlineData?.data) {
+        return res.json({ base64: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType });
+      } else {
+        return res.status(200).json({ message: 'درخواست پردازش شد، اما تصویری تولید نشد.', parts });
+      }
+    } catch (err) {
+      keyState[idx].inUse = false;
+      if (err.message.includes('429')) {
+        keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; // 1 ساعت
+        triedKeys++;
+        continue;
+      }
+      return next(err);
+    }
+  }
+
+  res.status(503).json({ error: 'هیچ‌کدام از کلیدها موفق نشد.' });
+}
+
+// =====================
+// مسیر POST چند تصویر
+// =====================
+router.post('/multi-image', upload.array('images', 3), (req, res, next) => {
+  const clientKey = req.headers['x-api-key'];
+  if (!clientKey || clientKey !== PRIVATE_KEY) {
+    return res.status(403).json({ error: '⛔ دسترسی غیرمجاز.' });
+  }
+
+  const { prompt } = req.body;
+  if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
+    return res.status(400).json({ error: '⛔ prompt معتبر نیست.' });
+  }
+
+  if (!req.files || !req.files.length) {
+    return res.status(400).json({ error: '⛔ تصاویر آپلود نشده‌اند.' });
+  }
+
+  requestQueue.push({ req, res, next });
+  processQueue();
 });
 
 // Middleware مدیریت خطا
