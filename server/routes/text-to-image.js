@@ -145,7 +145,7 @@ async function handleRequest(req, res, next) {
       keyState[idx].inUse = false;
 
       if (imagePart?.inlineData?.data) {
-        console.info(`✅ تصویر با موفقیت تولید شد با کلید index ${idx}`);
+        console.info(`✅ متن یه عکس  با موفقیت تولید شد با کلید index ${idx}`);
         return res.json({ base64: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType });
       } else {
         console.warn(`⚠️ درخواست پردازش شد اما تصویری تولید نشد. index ${idx}`);

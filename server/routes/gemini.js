@@ -148,7 +148,7 @@ async function handleRequest(req, res, next) {
       keyState[idx].inUse = false;
 
       if (imagePart?.inlineData?.data) {
-        console.log(`✅ تصویر تولید شد با کلید: ${key.substring(0, 10)}...`);
+        console.log(`✅ عکس به عکس تولید شد با کلید: ${key.substring(0, 10)}...`);
         return res.json({ base64: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType });
       } else {
         console.warn('⚠️ تصویری در پاسخ Gemini پیدا نشد.');
