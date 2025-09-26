@@ -1,5 +1,5 @@
 import express from 'express';
-import { GoogleGenAI, Modality, types } from '@google/genai';
+import { GoogleGenAI, Modality } from '@google/genai';
 import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
@@ -130,10 +130,9 @@ async function handleRequest(req, res, next) {
   let mimeType = 'audio/mp3';
 
   if (req.file) {
-    // فایل آپلود شده با multer
     audioBuffer = fs.readFileSync(req.file.path);
     mimeType = getMimeType(req.file.originalname);
-    fs.unlinkSync(req.file.path); // پاک کردن فایل temp
+    fs.unlinkSync(req.file.path);
   } else if (req.body.audioBase64) {
     audioBuffer = Buffer.from(req.body.audioBase64, 'base64');
     mimeType = req.body.mimeType || 'audio/mp3';
@@ -159,10 +158,10 @@ async function handleRequest(req, res, next) {
       const response = await client.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [
-          { parts: [
-              { inlineData: types.Blob({ data: audioBuffer, mime_type: mimeType }) },
-              { text: 'Generate a full transcript with timestamps in SRT format.' }
-            ] 
+          { 
+            text: 'Generate a full transcript with timestamps in SRT format.',
+            mime_type: mimeType,
+            inline: audioBuffer
           }
         ],
         config: { responseModalities: [Modality.TEXT] }
@@ -170,8 +169,9 @@ async function handleRequest(req, res, next) {
 
       keyState[idx].inUse = false;
 
-      const transcript = response.candidates?.[0]?.content?.parts?.[0]?.text;
+      const transcript = response.candidates?.[0]?.content?.[0]?.text;
       if (transcript) return res.json({ srt: transcript });
+
       return res.status(200).json({ message: 'متنی دریافت نشد.', response });
 
     } catch (err) {
@@ -191,7 +191,7 @@ async function handleRequest(req, res, next) {
 // =====================
 // مسیر POST
 // =====================
-router.post('/', upload.single('audioFile'), (req, res, next) => {
+router.post('/', upload.single('audio'), (req, res, next) => {
   const clientKey = req.headers['x-api-key'];
   if (!clientKey || clientKey !== PRIVATE_KEY) return res.status(403).json({ error: 'Unauthorized' });
 
