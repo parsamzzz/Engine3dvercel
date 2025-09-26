@@ -1,8 +1,11 @@
 import express from 'express';
 import { GoogleGenAI, Modality, types } from '@google/genai';
 import fs from 'fs';
+import multer from 'multer';
+import path from 'path';
 
 const router = express.Router();
+const upload = multer({ dest: 'tmp/' });
 
 // =====================
 // 🔑 همه کلیدها
@@ -85,6 +88,22 @@ function getNextAvailableKey() {
 }
 
 // =====================
+// MIME type براساس پسوند فایل
+// =====================
+function getMimeType(filename) {
+  const ext = path.extname(filename).toLowerCase();
+  switch(ext) {
+    case '.wav': return 'audio/wav';
+    case '.mp3': return 'audio/mp3';
+    case '.aiff': return 'audio/aiff';
+    case '.aac': return 'audio/aac';
+    case '.ogg': return 'audio/ogg';
+    case '.flac': return 'audio/flac';
+    default: return 'audio/mp3';
+  }
+}
+
+// =====================
 // پردازش صف
 // =====================
 async function processQueue() {
@@ -107,10 +126,20 @@ async function processQueue() {
 // تابع اصلی درخواست
 // =====================
 async function handleRequest(req, res, next) {
-  const { audioBase64 } = req.body;
-  if (!audioBase64) return res.status(400).json({ error: 'audioBase64 معتبر نیست.' });
+  let audioBuffer;
+  let mimeType = 'audio/mp3';
 
-  const audioBuffer = Buffer.from(audioBase64, 'base64');
+  if (req.file) {
+    // فایل آپلود شده با multer
+    audioBuffer = fs.readFileSync(req.file.path);
+    mimeType = getMimeType(req.file.originalname);
+    fs.unlinkSync(req.file.path); // پاک کردن فایل temp
+  } else if (req.body.audioBase64) {
+    audioBuffer = Buffer.from(req.body.audioBase64, 'base64');
+    mimeType = req.body.mimeType || 'audio/mp3';
+  } else {
+    return res.status(400).json({ error: 'فایل صوتی معتبر نیست.' });
+  }
 
   let triedKeys = 0;
   const totalKeys = API_KEYS.length;
@@ -131,7 +160,7 @@ async function handleRequest(req, res, next) {
         model: 'gemini-2.5-flash',
         contents: [
           { parts: [
-              { inlineData: types.Blob({ data: audioBuffer, mime_type: 'audio/mp3' }) },
+              { inlineData: types.Blob({ data: audioBuffer, mime_type: mimeType }) },
               { text: 'Generate a full transcript with timestamps in SRT format.' }
             ] 
           }
@@ -162,7 +191,7 @@ async function handleRequest(req, res, next) {
 // =====================
 // مسیر POST
 // =====================
-router.post('/', (req, res, next) => {
+router.post('/', upload.single('audioFile'), (req, res, next) => {
   const clientKey = req.headers['x-api-key'];
   if (!clientKey || clientKey !== PRIVATE_KEY) return res.status(403).json({ error: 'Unauthorized' });
 
