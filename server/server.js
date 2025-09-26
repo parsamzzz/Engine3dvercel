@@ -9,6 +9,8 @@ import geminiImageRoute from './routes/gemini.js';
 import textToImageRouter from './routes/text-to-image.js';
 import textToSpeechRoute from './routes/text-to-speech.js';
 import gemini2Router from './routes/gemini2.js';
+import speechToTextRouter from './routes/speech-to-text.js';
+
 
 dotenv.config();
 
@@ -34,6 +36,7 @@ app.use('/api/gemini-image', geminiImageRoute);
 app.use('/api/text-to-image', textToImageRouter);
 app.use('/api/text-to-speech', textToSpeechRoute);
 app.use('/api/gemini2', gemini2Router);
+app.use('/api/speech-to-text', speechToTextRouter);
 
 
 const BASE_PROMPT = `
