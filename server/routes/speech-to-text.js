@@ -64,7 +64,9 @@ const API_KEYS = [
 
 const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
 
+// =====================
 // وضعیت کلیدها و صف
+// =====================
 const keyState = API_KEYS.map(() => ({ cooldownUntil: 0, inUse: false }));
 let apiKeyIndex = 0;
 const requestQueue = [];
@@ -133,9 +135,6 @@ async function handleRequest(req, res, next) {
     audioBuffer = fs.readFileSync(req.file.path);
     mimeType = getMimeType(req.file.originalname);
     fs.unlinkSync(req.file.path);
-  } else if (req.body.audioBase64) {
-    audioBuffer = Buffer.from(req.body.audioBase64, 'base64');
-    mimeType = req.body.mimeType || 'audio/mp3';
   } else {
     return res.status(400).json({ error: 'فایل صوتی معتبر نیست.' });
   }
@@ -155,15 +154,17 @@ async function handleRequest(req, res, next) {
     try {
       const client = new GoogleGenAI({ apiKey: key });
 
+      // مرحله 1: آپلود فایل
+      const fileUpload = await client.files.upload({
+        file: audioBuffer,
+        config: { mimeType }
+      });
+
+      // مرحله 2: generateContent
       const response = await client.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: [
-          { 
-            text: 'Generate a full transcript with timestamps in SRT format.',
-            mime_type: mimeType,
-            inline: audioBuffer
-          }
-        ],
+        instructions: 'Generate a full transcript with timestamps in SRT format.',
+        input_files: [fileUpload.uri],
         config: { responseModalities: [Modality.TEXT] }
       });
 
