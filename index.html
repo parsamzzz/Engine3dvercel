@@ -13,6 +13,7 @@
     pre { background:#f0f0f0; padding:10px; margin-top:10px; white-space: pre-wrap; border:1px solid #ddd; border-radius:4px;}
     section { margin-bottom: 40px; }
     #statusMsg { font-weight:bold; color:#006400; margin-top:10px; }
+    a.download-link { color:#d6336c; font-weight:bold; }
   </style>
 </head>
 <body>
@@ -23,11 +24,21 @@
     <h2>۱. ساخت موزیک</h2>
 
     <label>🎤 Prompt:
-      <textarea id="prompt">یک آهنگ شاد پاپ درباره تابستان</textarea>
+      <textarea id="prompt">یک آهنگ شاد درباره تابستان</textarea>
     </label>
 
     <label>🎼 Music Style:
-      <input id="music_style" value="Pop" />
+      <select id="music_style">
+        <option value="Pop">Pop - پاپ</option>
+        <option value="Rock">Rock - راک</option>
+        <option value="Hip-Hop">Hip-Hop - هیپ‌هاپ</option>
+        <option value="Lo-fi">Lo-fi - لوفای</option>
+        <option value="Jazz">Jazz - جَز</option>
+        <option value="Classical">Classical - کلاسیک</option>
+        <option value="EDM">EDM - الکترونیک</option>
+        <option value="Country">Country - کانتری</option>
+        <option value="Folk">Folk - فولک</option>
+      </select>
     </label>
 
     <label>📝 Lyrics (اختیاری):
@@ -72,9 +83,10 @@
       try {
         const res = await fetch(`${BASE_API}/voices`);
         const json = await res.json();
-        if (json.success && json.voices) {
+        const voices = json.voices || json.data?.voices || [];
+        if (voices.length) {
           select.innerHTML = '';
-          json.voices.forEach(v => {
+          voices.forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.voice_id;
             opt.textContent = v.voice_name;
@@ -139,10 +151,14 @@
           const status = json.conversion?.status || json.status;
           if (status === 'COMPLETED' || status === 'FAILED') {
             clearInterval(intervalId);
-            document.getElementById('statusMsg').textContent =
-              status === 'COMPLETED'
-                ? '🎉 موزیک آماده شد!'
-                : '⚠️ پردازش ناموفق بود.';
+
+            if (status === 'COMPLETED') {
+              const audioUrl = json.conversion?.audio_url || json.audio_url;
+              document.getElementById('statusMsg').innerHTML =
+                `🎉 موزیک آماده شد! ${audioUrl ? `<a class="download-link" href="${audioUrl}" target="_blank">🎧 دانلود</a>` : ''}`;
+            } else {
+              document.getElementById('statusMsg').textContent = '⚠️ پردازش ناموفق بود.';
+            }
           } else {
             document.getElementById('statusMsg').textContent =
               `⏳ وضعیت فعلی: ${status || 'در حال پردازش...'}`;

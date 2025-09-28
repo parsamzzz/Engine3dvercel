@@ -9,7 +9,7 @@ const upload = multer();
 
 const BASE_URL = 'https://api.musicgpt.com/api/public/v1';
 const API_KEY =
-  'oZUxto2nBJQYM88WLXbwUwu0TS8vOcAd7zBNOBWfnvR6MEWPzSyBdOLsr3S02fXXm8F7QKG35m-8kWak8szUFQ';
+  '-ccq3UOUBxFhk6IjU19gPVTmDL1ACK93kzA7XTiCMJPDWTZx6CD2LRS5a0X4nk3BsZIVvS9RqfsyrjpT7dSy2g';
 
 /**
  * 🎤 دریافت لیست صداها

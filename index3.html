@@ -12,6 +12,7 @@
     button:hover { background:#0056b3; }
     pre { background:#f0f0f0; padding:10px; margin-top:10px; white-space:pre-wrap; border:1px solid #ddd; border-radius:4px; }
     audio { margin-top:10px; display:none; }
+    .download { color:#d6336c; font-weight:bold; }
   </style>
 </head>
 <body>
@@ -58,6 +59,7 @@
     const voiceSelect = document.getElementById('voiceSelect');
     const resultBox = document.getElementById('resultBox');
     const audioPlayer = document.getElementById('audioPlayer');
+    let intervalId = null;
 
     // 📥 دریافت لیست صداها
     async function loadVoices() {
@@ -82,8 +84,9 @@
       }
     }
 
-    // 🚀 تغییر صدا
+    // 🚀 شروع تغییر صدا
     async function changeVoice() {
+      clearInterval(intervalId);
       const voiceId = voiceSelect.value;
       const audioUrl = document.getElementById('audioUrl').value.trim();
       const audioFile = document.getElementById('audioFile').files[0];
@@ -107,12 +110,10 @@
       if (audioFile) formData.append('audio_file', audioFile);
 
       resultBox.textContent = '⏳ در حال ارسال...';
+      audioPlayer.style.display = 'none';
 
       try {
-        const res = await fetch(`${BASE_API}/change`, {
-          method: 'POST',
-          body: formData
-        });
+        const res = await fetch(`${BASE_API}/change`, { method: 'POST', body: formData });
         const json = await res.json();
         resultBox.textContent = JSON.stringify(json, null, 2);
 
@@ -125,9 +126,9 @@
       }
     }
 
-    // ⏳ بررسی وضعیت
+    // ⏳ بررسی خودکار وضعیت
     async function checkStatus(conversionId) {
-      const interval = setInterval(async () => {
+      intervalId = setInterval(async () => {
         try {
           const res = await fetch(`${BASE_API}/status/${conversionId}`);
           const json = await res.json();
@@ -135,22 +136,24 @@
 
           const status = json.conversion?.status || json.status;
           if (status === 'COMPLETED') {
-            clearInterval(interval);
+            clearInterval(intervalId);
             const audioUrl = json.conversion?.audio_url || json.conversion?.conversion_path;
             if (audioUrl) {
               audioPlayer.src = audioUrl;
               audioPlayer.style.display = 'block';
-              resultBox.textContent += '\n✅ صدا آماده است.';
+              resultBox.textContent += `\n✅ صدا آماده است.\n📥 دانلود: ${audioUrl}`;
             }
           } else if (status === 'FAILED') {
-            clearInterval(interval);
+            clearInterval(intervalId);
             resultBox.textContent += '\n❌ تبدیل ناموفق بود.';
+          } else {
+            resultBox.textContent += `\n⏳ وضعیت فعلی: ${status || 'در حال پردازش...'}`;
           }
         } catch (err) {
-          clearInterval(interval);
+          clearInterval(intervalId);
           resultBox.textContent += '\n⚠️ خطا در وضعیت: ' + err.message;
         }
-      }, 8000);
+      }, 8000); // هر 8 ثانیه
     }
   </script>
 </body>

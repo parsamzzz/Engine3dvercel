@@ -2,24 +2,25 @@
 <html lang="fa">
 <head>
   <meta charset="UTF-8" />
-  <title>تست Sound Generator</title>
+  <title>🔊 تست Sound Generator</title>
   <style>
-    body { font-family: sans-serif; direction: rtl; margin: 20px; background: #fafafa;}
+    body { font-family: sans-serif; direction: rtl; margin: 20px; background: #fafafa; }
     h1,h2 { color: #333; }
-    label { display:block; margin-top:10px; font-weight:bold;}
-    input, textarea { width:100%; padding:6px; margin-top:4px; box-sizing:border-box;}
-    button { margin-top:15px; padding:8px 16px; cursor:pointer; background:#007bff; color:#fff; border:none; border-radius:4px;}
-    button:hover { background:#0056b3;}
-    pre { background:#f0f0f0; padding:10px; margin-top:10px; white-space:pre-wrap; border:1px solid #ddd; border-radius:4px;}
+    label { display:block; margin-top:10px; font-weight:bold; }
+    input, textarea { width:100%; padding:6px; margin-top:4px; box-sizing:border-box; }
+    button { margin-top:15px; padding:8px 16px; cursor:pointer; background:#007bff; color:#fff; border:none; border-radius:4px; }
+    button:hover { background:#0056b3; }
+    pre { background:#f0f0f0; padding:10px; margin-top:10px; white-space:pre-wrap; border:1px solid #ddd; border-radius:4px; }
     #statusMsg { font-weight:bold; margin-top:10px; color:#006400; }
+    a.download { color:#d6336c; font-weight:bold; }
   </style>
 </head>
 <body>
-  <h1>🔊 تست Sound Generator روی سرور</h1>
+  <h1>🔊 تست Sound Generator</h1>
 
   <!-- فرم ساخت صدا -->
   <section>
-    <h2>ساخت صدا</h2>
+    <h2>۱. ساخت صدا</h2>
     <label>📝 Prompt:
       <textarea id="prompt">صدای موج دریا هنگام شب</textarea>
     </label>
@@ -30,21 +31,20 @@
 
     <button onclick="createSound()">🎶 ارسال درخواست ساخت صدا</button>
 
-    <pre id="createResult">نتیجه درخواست ساخت صدا اینجا نمایش داده می‌شود...</pre>
+    <pre id="createResult">نتیجهٔ درخواست اینجا نمایش داده می‌شود...</pre>
   </section>
 
   <!-- وضعیت -->
   <section>
-    <h2>وضعیت ساخت صدا</h2>
+    <h2>۲. وضعیت ساخت صدا</h2>
     <p id="statusMsg">در انتظار ارسال درخواست...</p>
     <pre id="statusResult">وضعیت اینجا نمایش داده می‌شود...</pre>
     <audio id="audioPlayer" controls style="display:none; margin-top:10px;"></audio>
   </section>
 
   <script>
-    // 🟢 آدرس بک‌اند
+    // آدرس بک‌اند
     const BASE_API = 'https://engine3dvercel.onrender.com/api/sound';
-
     let intervalId = null;
 
     async function createSound() {
@@ -67,44 +67,50 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
+
         const json = await res.json();
         document.getElementById('createResult').textContent = JSON.stringify(json, null, 2);
 
-        // 👇 استفاده از conversion_id به جای task_id
-        if (json.conversion_id) {
-          document.getElementById('statusMsg').textContent = `✅ درخواست ثبت شد. conversion_id: ${json.conversion_id} — در حال بررسی وضعیت...`;
-          startAutoCheck(json.conversion_id);
+        // استفاده از task_id (طبق داکیومنت رسمی)
+        if (json.task_id) {
+          document.getElementById('statusMsg').textContent =
+            `✅ درخواست ثبت شد. task_id: ${json.task_id} — در حال بررسی وضعیت...`;
+          startAutoCheck(json.task_id);
         } else {
-          document.getElementById('statusMsg').textContent = '❌ conversion_id دریافت نشد.';
+          document.getElementById('statusMsg').textContent = '❌ task_id دریافت نشد.';
         }
       } catch (err) {
         document.getElementById('createResult').textContent = '❌ خطا: ' + err.message;
       }
     }
 
-    function startAutoCheck(conversionId) {
+    function startAutoCheck(taskId) {
       intervalId = setInterval(async () => {
         try {
-          const res = await fetch(`${BASE_API}/status/${conversionId}`);
+          const res = await fetch(`${BASE_API}/status/${taskId}`);
           const json = await res.json();
           document.getElementById('statusResult').textContent = JSON.stringify(json, null, 2);
 
           const status = json.conversion?.status || json.status;
           if (status === 'COMPLETED' || status === 'FAILED') {
             clearInterval(intervalId);
+
             if (status === 'COMPLETED') {
-              document.getElementById('statusMsg').textContent = '🎉 صدا آماده شد!';
-              const audioUrl = json.conversion?.conversion_path || json.conversion?.conversion_path_wav;
+              document.getElementById('statusMsg').innerHTML = '🎉 صدا آماده شد!';
+              const audioUrl = json.conversion?.audio_url || json.conversion?.conversion_path || json.audio_url;
               if (audioUrl) {
                 const player = document.getElementById('audioPlayer');
                 player.src = audioUrl;
                 player.style.display = 'block';
+                document.getElementById('statusMsg').innerHTML +=
+                  ` <a class="download" href="${audioUrl}" target="_blank">📥 دانلود</a>`;
               }
             } else {
               document.getElementById('statusMsg').textContent = '⚠️ پردازش ناموفق بود.';
             }
           } else {
-            document.getElementById('statusMsg').textContent = `⏳ وضعیت فعلی: ${status || 'در حال پردازش...'}`;
+            document.getElementById('statusMsg').textContent =
+              `⏳ وضعیت فعلی: ${status || 'در حال پردازش...'}`;
           }
         } catch (err) {
           clearInterval(intervalId);
