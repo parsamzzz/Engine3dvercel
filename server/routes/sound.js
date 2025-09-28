@@ -39,10 +39,7 @@ router.post('/create', async (req, res) => {
   }
 });
 
-/**
- * 🔎 بررسی وضعیت ساخت صدا
- * GET /api/sound/status/:taskId
- */
+
 router.get('/status/:taskId', async (req, res) => {
   const { taskId } = req.params;
   const { conversionType = 'SOUND_GENERATOR' } = req.query;
