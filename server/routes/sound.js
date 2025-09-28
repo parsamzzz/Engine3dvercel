@@ -13,17 +13,17 @@ const API_KEY =
  * POST /api/sound/create
  */
 router.post('/create', async (req, res) => {
-  const { prompt, audio_length, webhook_url } = req.body;
+  const { prompt, audio_length = 10, webhook_url = '' } = req.body;
 
   if (!prompt) {
     return res.status(400).json({ error: '❌ فیلد prompt الزامی است.' });
   }
 
   try {
-    // 🟢 ارسال به صورت فرم URL-encoded
+    // 🟢 ارسال به‌صورت URL-encoded
     const formData = new URLSearchParams();
     formData.append('prompt', prompt);
-    formData.append('audio_length', audio_length || 10);
+    formData.append('audio_length', audio_length);
     if (webhook_url) formData.append('webhook_url', webhook_url);
 
     const response = await axios.post(`${BASE_URL}/sound_generator`, formData, {
@@ -33,34 +33,39 @@ router.post('/create', async (req, res) => {
       },
     });
 
-    // خروجی شامل task_id و conversion_id
+    // پاسخ شامل task_id و conversion_id است
     res.json(response.data);
   } catch (err) {
     console.error('❌ Sound Generator error:', err.response?.data || err.message);
-    res.status(500).json({ error: err.response?.data || err.message });
+    res.status(500).json({
+      error: err.response?.data || err.message,
+    });
   }
 });
 
 /**
  * 🔎 بررسی وضعیت ساخت صدا
- * GET /api/sound/status/:conversionId
+ * GET /api/sound/status/:taskId
+ * ✅ طبق مستندات باید از task_id استفاده شود
  */
-router.get('/status/:conversionId', async (req, res) => {
-  const { conversionId } = req.params;
+router.get('/status/:taskId', async (req, res) => {
+  const { taskId } = req.params;
 
   try {
     const response = await axios.get(`${BASE_URL}/byId`, {
       headers: { Authorization: API_KEY },
       params: {
-        conversion_id: conversionId,           // شناسه‌ی تبدیل
-        conversionType: 'SOUND_GENERATOR',     // 👈 حتماً اضافه شود
+        conversionType: 'SOUND_GENERATOR', // 👈 الزامی
+        task_id: taskId,                   // 👈 بر اساس مستندات
       },
     });
 
     res.json(response.data);
   } catch (err) {
     console.error('❌ Sound Status error:', err.response?.data || err.message);
-    res.status(500).json({ error: err.response?.data || err.message });
+    res.status(500).json({
+      error: err.response?.data || err.message,
+    });
   }
 });
 

@@ -16,7 +16,7 @@ router.post('/create', async (req, res) => {
     make_instrumental = false,
     vocal_only = false,
     voice_id,
-    webhook_url
+    webhook_url = '' // اگر خالی باشد وب‌هوک غیرفعال می‌ماند
   } = req.body;
 
   if (!prompt) {
@@ -43,11 +43,13 @@ router.post('/create', async (req, res) => {
       }
     );
 
-    // پاسخ شامل task_id و conversion_id_1 و conversion_id_2 است
+    // پاسخ شامل task_id و conversion_id_1 و conversion_id_2
     res.json(response.data);
   } catch (err) {
     console.error('❌ MusicAI error:', err.response?.data || err.message);
-    res.status(500).json({ error: err.response?.data || err.message });
+    res.status(500).json({
+      error: err.response?.data || err.message
+    });
   }
 });
 
@@ -59,19 +61,21 @@ router.get('/status/:taskId', async (req, res) => {
     const response = await axios.get(`${BASE_URL}/byId`, {
       headers: { Authorization: API_KEY },
       params: {
-        task_id: taskId,                // ✅ استفاده از task_id
-        conversionType: 'MUSIC_AI'      // ✅ برای MusicAI الزامی است
+        conversionType: 'MUSIC_AI', // 👈 طبق مستندات
+        task_id: taskId             // 👈 استفاده از task_id
       }
     });
 
     res.json(response.data);
   } catch (err) {
     console.error('❌ Status error:', err.response?.data || err.message);
-    res.status(500).json({ error: err.response?.data || err.message });
+    res.status(500).json({
+      error: err.response?.data || err.message
+    });
   }
 });
 
-/* 🎤 دریافت لیست صداها */
+/* 🎤 دریافت لیست صداها برای استفاده در MusicAI */
 router.get('/voices', async (req, res) => {
   const { limit = 20, page = 0 } = req.query;
 
@@ -84,7 +88,9 @@ router.get('/voices', async (req, res) => {
     res.json(response.data);
   } catch (err) {
     console.error('❌ Voices List error:', err.response?.data || err.message);
-    res.status(500).json({ error: err.response?.data || err.message });
+    res.status(500).json({
+      error: err.response?.data || err.message
+    });
   }
 });
 
