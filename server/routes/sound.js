@@ -19,7 +19,6 @@ router.post('/create', async (req, res) => {
   }
 
   try {
-    // 🟢 استفاده از فرم URL-encoded چون API این فرمت را می‌خواهد
     const formData = new URLSearchParams();
     formData.append('prompt', prompt);
     formData.append('audio_length', audio_length || 10);
@@ -32,6 +31,7 @@ router.post('/create', async (req, res) => {
       }
     });
 
+    // خروجی شامل task_id و conversion_id است
     res.json(response.data);
   } catch (err) {
     console.error('❌ Sound Generator error:', err.response?.data || err.message);
@@ -39,15 +39,17 @@ router.post('/create', async (req, res) => {
   }
 });
 
-
-router.get('/status/:taskId', async (req, res) => {
-  const { taskId } = req.params;
-  const { conversionType = 'SOUND_GENERATOR' } = req.query;
+/**
+ * 🔎 بررسی وضعیت ساخت صدا
+ * GET /api/sound/status/:conversionId
+ */
+router.get('/status/:conversionId', async (req, res) => {
+  const { conversionId } = req.params;
 
   try {
     const response = await axios.get(`${BASE_URL}/byId`, {
       headers: { Authorization: API_KEY },
-      params: { conversionType, task_id: taskId }
+      params: { conversion_id: conversionId }  // 👈 تغییر اصلی این‌جاست
     });
 
     res.json(response.data);
