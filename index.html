@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8" />
+  <title>تست MusicGPT با بررسی خودکار</title>
+  <style>
+    body { font-family: sans-serif; direction: rtl; margin: 20px; background: #fafafa;}
+    h1,h2 { color: #333; }
+    label { display:block; margin-top:10px; font-weight: bold;}
+    input, textarea { width:100%; padding:6px; margin-top:4px; box-sizing: border-box;}
+    button { margin-top:15px; padding:8px 16px; cursor:pointer; background:#007bff; color:#fff; border:none; border-radius:4px;}
+    button:hover { background:#0056b3;}
+    pre { background:#f0f0f0; padding:10px; margin-top:10px; white-space: pre-wrap; border:1px solid #ddd; border-radius:4px;}
+    section { margin-bottom: 40px; }
+    #statusMsg { font-weight:bold; color:#006400; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <h1>🎵 تست MusicGPT روی سرور Vercel</h1>
+
+  <!-- ساخت موزیک -->
+  <section>
+    <h2>ساخت موزیک</h2>
+
+    <label>🎤 Prompt:
+      <textarea id="prompt">یک آهنگ شاد پاپ درباره تابستان</textarea>
+    </label>
+
+    <label>🎼 Music Style:
+      <input id="music_style" value="Pop" />
+    </label>
+
+    <label>📝 Lyrics (اختیاری):
+      <textarea id="lyrics"></textarea>
+    </label>
+
+    <label>🎙️ Voice ID (مثلاً Drake):
+      <input id="voice_id" value="Drake" />
+    </label>
+
+    <label>
+      <input type="checkbox" id="make_instrumental" /> Instrumental Only
+    </label>
+
+    <label>
+      <input type="checkbox" id="vocal_only" /> Vocal Only
+    </label>
+
+    <button onclick="createMusic()">🎶 ارسال درخواست ساخت موزیک</button>
+
+    <pre id="createResult">در اینجا نتیجه درخواست ساخت موزیک نمایش داده می‌شود...</pre>
+  </section>
+
+  <!-- وضعیت -->
+  <section>
+    <h2>بررسی وضعیت</h2>
+    <p id="statusMsg">در انتظار ارسال درخواست...</p>
+    <pre id="statusResult">وضعیت موزیک اینجا نمایش داده می‌شود...</pre>
+  </section>
+
+  <script>
+    // 🟢 آدرس بک‌اند روی Vercel
+    const BASE_API = 'https://engine3dvercel.onrender.com/api/music';
+    let intervalId = null;
+
+    // ساخت موزیک
+    async function createMusic() {
+      clearInterval(intervalId); // متوقف کردن هر بررسی قبلی
+      document.getElementById('statusMsg').textContent = '⏳ منتظر ایجاد task_id...';
+      document.getElementById('statusResult').textContent = '';
+
+      const data = {
+        prompt: document.getElementById('prompt').value,
+        music_style: document.getElementById('music_style').value,
+        lyrics: document.getElementById('lyrics').value,
+        voice_id: document.getElementById('voice_id').value,
+        make_instrumental: document.getElementById('make_instrumental').checked,
+        vocal_only: document.getElementById('vocal_only').checked,
+        webhook_url: '' // بدون وب‌هوک
+      };
+
+      document.getElementById('createResult').textContent = '⏳ در حال ارسال درخواست...';
+
+      try {
+        const res = await fetch(`${BASE_API}/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        document.getElementById('createResult').textContent = JSON.stringify(json, null, 2);
+
+        if (json.task_id) {
+          document.getElementById('statusMsg').textContent = `✅ درخواست ارسال شد. task_id: ${json.task_id} — شروع بررسی خودکار...`;
+          startAutoCheck(json.task_id);
+        } else {
+          document.getElementById('statusMsg').textContent = '❌ task_id دریافت نشد.';
+        }
+      } catch (err) {
+        document.getElementById('createResult').textContent = '❌ خطا: ' + err.message;
+      }
+    }
+
+    // شروع بررسی خودکار
+    function startAutoCheck(taskId) {
+      intervalId = setInterval(async () => {
+        try {
+          const res = await fetch(`${BASE_API}/status/${taskId}`);
+          const json = await res.json();
+          document.getElementById('statusResult').textContent = JSON.stringify(json, null, 2);
+
+          const status = json.conversion?.status || json.status;
+          if (status === 'COMPLETED' || status === 'FAILED') {
+            clearInterval(intervalId);
+            document.getElementById('statusMsg').textContent =
+              status === 'COMPLETED'
+                ? '🎉 موزیک آماده شد!'
+                : '⚠️ پردازش ناموفق بود.';
+          } else {
+            document.getElementById('statusMsg').textContent = `⏳ وضعیت فعلی: ${status || 'در حال پردازش...'}`;
+          }
+        } catch (err) {
+          clearInterval(intervalId);
+          document.getElementById('statusMsg').textContent = '❌ خطا در بررسی وضعیت.';
+        }
+      }, 10000); // هر 10 ثانیه یکبار
+    }
+  </script>
+</body>
+</html>
