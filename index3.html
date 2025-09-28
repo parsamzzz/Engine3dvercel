@@ -67,9 +67,10 @@
       try {
         const res = await fetch(`${BASE_API}/list`);
         const json = await res.json();
-        if (json.success && json.voices) {
+        const voices = json.voices || json.data?.voices || [];
+        if (voices.length) {
           voiceSelect.innerHTML = '';
-          json.voices.forEach(v => {
+          voices.forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.voice_id;
             opt.textContent = v.voice_name;
@@ -117,9 +118,11 @@
         const json = await res.json();
         resultBox.textContent = JSON.stringify(json, null, 2);
 
-        if (json.success && json.conversion_id) {
+        if (json.task_id) {
           resultBox.textContent += '\n⏳ در حال بررسی وضعیت...';
-          checkStatus(json.conversion_id);
+          checkStatus(json.task_id);
+        } else {
+          resultBox.textContent += '\n❌ task_id دریافت نشد.';
         }
       } catch (err) {
         resultBox.textContent = '❌ خطا: ' + err.message;
@@ -127,10 +130,10 @@
     }
 
     // ⏳ بررسی خودکار وضعیت
-    async function checkStatus(conversionId) {
+    function checkStatus(taskId) {
       intervalId = setInterval(async () => {
         try {
-          const res = await fetch(`${BASE_API}/status/${conversionId}`);
+          const res = await fetch(`${BASE_API}/status/${taskId}`);
           const json = await res.json();
           resultBox.textContent = JSON.stringify(json, null, 2);
 

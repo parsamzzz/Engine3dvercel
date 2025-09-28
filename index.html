@@ -82,6 +82,7 @@
       select.innerHTML = '<option>⏳ در حال دریافت...</option>';
       try {
         const res = await fetch(`${BASE_API}/voices`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         const voices = json.voices || json.data?.voices || [];
         if (voices.length) {
@@ -125,13 +126,15 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         document.getElementById('createResult').textContent = JSON.stringify(json, null, 2);
 
-        if (json.task_id) {
+        const taskId = json.task_id || json.taskId;
+        if (taskId) {
           document.getElementById('statusMsg').textContent =
-            `✅ درخواست ارسال شد. task_id: ${json.task_id} — شروع بررسی خودکار...`;
-          startAutoCheck(json.task_id);
+            `✅ درخواست ارسال شد. task_id: ${taskId} — شروع بررسی خودکار...`;
+          startAutoCheck(taskId);
         } else {
           document.getElementById('statusMsg').textContent = '❌ task_id دریافت نشد.';
         }
@@ -145,6 +148,7 @@
       intervalId = setInterval(async () => {
         try {
           const res = await fetch(`${BASE_API}/status/${taskId}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const json = await res.json();
           document.getElementById('statusResult').textContent = JSON.stringify(json, null, 2);
 
@@ -154,8 +158,15 @@
 
             if (status === 'COMPLETED') {
               const audioUrl = json.conversion?.audio_url || json.audio_url;
+              const audioUrl2 = json.conversion?.audio_url_2 || json.audio_url_2;
+              let linkHtml = audioUrl
+                ? `<a class="download-link" href="${audioUrl}" target="_blank">🎧 دانلود نسخه اول</a>`
+                : '';
+              if (audioUrl2) {
+                linkHtml += ` | <a class="download-link" href="${audioUrl2}" target="_blank">🎧 دانلود نسخه دوم</a>`;
+              }
               document.getElementById('statusMsg').innerHTML =
-                `🎉 موزیک آماده شد! ${audioUrl ? `<a class="download-link" href="${audioUrl}" target="_blank">🎧 دانلود</a>` : ''}`;
+                `🎉 موزیک آماده شد! ${linkHtml}`;
             } else {
               document.getElementById('statusMsg').textContent = '⚠️ پردازش ناموفق بود.';
             }
@@ -165,7 +176,7 @@
           }
         } catch (err) {
           clearInterval(intervalId);
-          document.getElementById('statusMsg').textContent = '❌ خطا در بررسی وضعیت.';
+          document.getElementById('statusMsg').textContent = '❌ خطا در بررسی وضعیت: ' + err.message;
         }
       }, 10000);
     }

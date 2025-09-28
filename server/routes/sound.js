@@ -5,9 +5,8 @@ import axios from 'axios'
 const router = express.Router()
 
 const BASE_URL = 'https://api.musicgpt.com/api/public/v1'
-const API_KEY =
-  process.env.MUSICGPT_API_KEY ||
-  '-ccq3UOUBxFhk6IjU19gPVTmDL1ACK93kzA7XTiCMJPDWTZx6CD2LRS5a0X4nk3BsZIVvS9RqfsyrjpT7dSy2g'
+const API_KEY = '-ccq3UOUBxFhk6IjU19gPVTmDL1ACK93kzA7XTiCMJPDWTZx6CD2LRS5a0X4nk3BsZIVvS9RqfsyrjpT7dSy2g'
+
 
 /* 🎛 ساخت صدا از متن  POST /api/sound/create */
 router.post('/create', async (req, res) => {

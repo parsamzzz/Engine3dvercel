@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <title>🔊 تست Sound Generator</title>
   <style>
-    body { font-family: sans-serif; direction: rtl; margin: 20px; background: #fafafa; }
-    h1,h2 { color: #333; }
+    body { font-family:sans-serif; direction:rtl; margin:20px; background:#fafafa; }
+    h1,h2 { color:#333; }
     label { display:block; margin-top:10px; font-weight:bold; }
-    input, textarea { width:100%; padding:6px; margin-top:4px; box-sizing:border-box; }
+    input,textarea { width:100%; padding:6px; margin-top:4px; box-sizing:border-box; }
     button { margin-top:15px; padding:8px 16px; cursor:pointer; background:#007bff; color:#fff; border:none; border-radius:4px; }
     button:hover { background:#0056b3; }
     pre { background:#f0f0f0; padding:10px; margin-top:10px; white-space:pre-wrap; border:1px solid #ddd; border-radius:4px; }
@@ -43,7 +43,6 @@
   </section>
 
   <script>
-    // آدرس بک‌اند
     const BASE_API = 'https://engine3dvercel.onrender.com/api/sound';
     let intervalId = null;
 
@@ -56,7 +55,7 @@
       const data = {
         prompt: document.getElementById('prompt').value,
         audio_length: parseInt(document.getElementById('audio_length').value) || 10,
-        webhook_url: '' // بدون وب‌هوک
+        webhook_url: ''
       };
 
       document.getElementById('createResult').textContent = '⏳ در حال ارسال...';
@@ -67,11 +66,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const json = await res.json();
         document.getElementById('createResult').textContent = JSON.stringify(json, null, 2);
 
-        // استفاده از task_id (طبق داکیومنت رسمی)
         if (json.task_id) {
           document.getElementById('statusMsg').textContent =
             `✅ درخواست ثبت شد. task_id: ${json.task_id} — در حال بررسی وضعیت...`;
@@ -88,6 +87,7 @@
       intervalId = setInterval(async () => {
         try {
           const res = await fetch(`${BASE_API}/status/${taskId}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const json = await res.json();
           document.getElementById('statusResult').textContent = JSON.stringify(json, null, 2);
 
@@ -97,13 +97,23 @@
 
             if (status === 'COMPLETED') {
               document.getElementById('statusMsg').innerHTML = '🎉 صدا آماده شد!';
-              const audioUrl = json.conversion?.audio_url || json.conversion?.conversion_path || json.audio_url;
+              const audioUrl =
+                json.conversion?.audio_url ||
+                json.conversion?.conversion_path ||
+                json.audio_url;
+              const audioUrlWav =
+                json.conversion?.conversion_path_wav || json.audio_url_wav;
+
               if (audioUrl) {
                 const player = document.getElementById('audioPlayer');
                 player.src = audioUrl;
                 player.style.display = 'block';
                 document.getElementById('statusMsg').innerHTML +=
-                  ` <a class="download" href="${audioUrl}" target="_blank">📥 دانلود</a>`;
+                  ` <a class="download" href="${audioUrl}" target="_blank">📥 دانلود MP3</a>`;
+              }
+              if (audioUrlWav) {
+                document.getElementById('statusMsg').innerHTML +=
+                  ` | <a class="download" href="${audioUrlWav}" target="_blank">📥 دانلود WAV</a>`;
               }
             } else {
               document.getElementById('statusMsg').textContent = '⚠️ پردازش ناموفق بود.';
@@ -114,9 +124,10 @@
           }
         } catch (err) {
           clearInterval(intervalId);
-          document.getElementById('statusMsg').textContent = '❌ خطا در بررسی وضعیت.';
+          document.getElementById('statusMsg').textContent =
+            '❌ خطا در بررسی وضعیت: ' + err.message;
         }
-      }, 10000); // هر 10 ثانیه
+      }, 10000);
     }
   </script>
 </body>

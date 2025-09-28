@@ -8,9 +8,8 @@ const router = express.Router()
 const upload = multer()
 
 const BASE_URL = 'https://api.musicgpt.com/api/public/v1'
-const API_KEY =
-  process.env.MUSICGPT_API_KEY ||
-  '-ccq3UOUBxFhk6IjU19gPVTmDL1ACK93kzA7XTiCMJPDWTZx6CD2LRS5a0X4nk3BsZIVvS9RqfsyrjpT7dSy2g'
+const API_KEY = '-ccq3UOUBxFhk6IjU19gPVTmDL1ACK93kzA7XTiCMJPDWTZx6CD2LRS5a0X4nk3BsZIVvS9RqfsyrjpT7dSy2g'
+
 
 /* 🎤 لیست صداها */
 router.get('/list', async (req, res) => {
