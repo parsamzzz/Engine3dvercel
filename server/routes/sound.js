@@ -1,3 +1,4 @@
+// routes/sound.js
 import express from 'express';
 import axios from 'axios';
 
@@ -5,7 +6,6 @@ const router = express.Router();
 
 const BASE_URL = 'https://api.musicgpt.com/api/public/v1';
 const API_KEY = 'oZUxto2nBJQYM88WLXbwUwu0TS8vOcAd7zBNOBWfnvR6MEWPzSyBdOLsr3S02fXXm8F7QKG35m-8kWak8szUFQ';
-
 
 /**
  * 🎛 ساخت صدا از متن
@@ -19,22 +19,19 @@ router.post('/create', async (req, res) => {
   }
 
   try {
-    const response = await axios.post(
-      `${BASE_URL}/sound_generator`,
-      {
-        prompt,
-        audio_length: audio_length || 10,   // مدت صدا بر حسب ثانیه
-        webhook_url: webhook_url || ''      // اگر وب‌هوک نمی‌خواهی خالی بفرست
-      },
-      {
-        headers: {
-          Authorization: API_KEY,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+    // 🟢 استفاده از فرم URL-encoded چون API این فرمت را می‌خواهد
+    const formData = new URLSearchParams();
+    formData.append('prompt', prompt);
+    formData.append('audio_length', audio_length || 10);
+    if (webhook_url) formData.append('webhook_url', webhook_url);
 
-    // پاسخ شامل task_id و conversion_id
+    const response = await axios.post(`${BASE_URL}/sound_generator`, formData, {
+      headers: {
+        Authorization: API_KEY,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+
     res.json(response.data);
   } catch (err) {
     console.error('❌ Sound Generator error:', err.response?.data || err.message);
