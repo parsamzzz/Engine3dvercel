@@ -5,7 +5,8 @@ import axios from 'axios';
 const router = express.Router();
 
 const BASE_URL = 'https://api.musicgpt.com/api/public/v1';
-const API_KEY = 'oZUxto2nBJQYM88WLXbwUwu0TS8vOcAd7zBNOBWfnvR6MEWPzSyBdOLsr3S02fXXm8F7QKG35m-8kWak8szUFQ';
+const API_KEY =
+  'oZUxto2nBJQYM88WLXbwUwu0TS8vOcAd7zBNOBWfnvR6MEWPzSyBdOLsr3S02fXXm8F7QKG35m-8kWak8szUFQ';
 
 /**
  * 🎛 ساخت صدا از متن
@@ -19,6 +20,7 @@ router.post('/create', async (req, res) => {
   }
 
   try {
+    // 🟢 ارسال به صورت فرم URL-encoded
     const formData = new URLSearchParams();
     formData.append('prompt', prompt);
     formData.append('audio_length', audio_length || 10);
@@ -27,11 +29,11 @@ router.post('/create', async (req, res) => {
     const response = await axios.post(`${BASE_URL}/sound_generator`, formData, {
       headers: {
         Authorization: API_KEY,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
     });
 
-    // خروجی شامل task_id و conversion_id است
+    // خروجی شامل task_id و conversion_id
     res.json(response.data);
   } catch (err) {
     console.error('❌ Sound Generator error:', err.response?.data || err.message);
@@ -49,7 +51,10 @@ router.get('/status/:conversionId', async (req, res) => {
   try {
     const response = await axios.get(`${BASE_URL}/byId`, {
       headers: { Authorization: API_KEY },
-      params: { conversion_id: conversionId }  // 👈 تغییر اصلی این‌جاست
+      params: {
+        conversion_id: conversionId,           // شناسه‌ی تبدیل
+        conversionType: 'SOUND_GENERATOR',     // 👈 حتماً اضافه شود
+      },
     });
 
     res.json(response.data);
