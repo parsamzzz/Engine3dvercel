@@ -12,6 +12,8 @@ import gemini2Router from './routes/gemini2.js';
 import speechToTextRouter from './routes/speech-to-text.js';
 import musicRouter from './routes/music.js';
 import soundRouter from './routes/sound.js';
+import voiceRoutes from './routes/voice.js';
+
 
 
 
@@ -43,6 +45,8 @@ app.use('/api/gemini2', gemini2Router);
 app.use('/api/speech-to-text', speechToTextRouter);
 app.use('/api/music', musicRouter);
 app.use('/api/sound', soundRouter);
+app.use('/api/voice', voiceRoutes);
+
 
 
 
