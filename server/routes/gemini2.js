@@ -61,9 +61,7 @@ const API_KEYS = [
   "AIzaSyALL4vcUd3Kgk17OCNTt75H5VErcwvDxUc"
 ];
 
-// =====================
-// 🛡 کلید خصوصی کلاینت
-// =====================
+
 const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
 let apiKeyIndex = 0;
 
