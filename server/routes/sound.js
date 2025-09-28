@@ -7,7 +7,6 @@ const router = express.Router()
 const BASE_URL = 'https://api.musicgpt.com/api/public/v1'
 const API_KEY = '-ccq3UOUBxFhk6IjU19gPVTmDL1ACK93kzA7XTiCMJPDWTZx6CD2LRS5a0X4nk3BsZIVvS9RqfsyrjpT7dSy2g'
 
-
 /* 🎛 ساخت صدا از متن  POST /api/sound/create */
 router.post('/create', async (req, res) => {
   const { prompt = '', audio_length = 10, webhook_url = '' } = req.body
@@ -17,18 +16,25 @@ router.post('/create', async (req, res) => {
   }
 
   try {
-    // می‌توان JSON هم فرستاد؛ MusicGPT قبول می‌کند
-    const response = await axios.post(
-      `${BASE_URL}/sound_generator`,
-      { prompt, audio_length, webhook_url },
-      { headers: { Authorization: API_KEY, 'Content-Type': 'application/json' } }
-    )
+    // تبدیل به فرم URL-encoded
+    const formData = new URLSearchParams()
+    formData.append('prompt', prompt)
+    formData.append('audio_length', audio_length.toString())
+    if (webhook_url) formData.append('webhook_url', webhook_url)
 
-    // پاسخ شامل task_id و conversion_id
+    const response = await axios.post(`${BASE_URL}/sound_generator`, formData, {
+      headers: {
+        Authorization: API_KEY,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    })
+
     res.status(response.status).json(response.data)
   } catch (err) {
     console.error('❌ Sound Generator error:', err.response?.data || err.message)
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message })
+    res
+      .status(err.response?.status || 500)
+      .json({ error: err.response?.data || err.message })
   }
 })
 
@@ -43,7 +49,9 @@ router.get('/status/:taskId', async (req, res) => {
     res.status(response.status).json(response.data)
   } catch (err) {
     console.error('❌ Sound Status error:', err.response?.data || err.message)
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message })
+    res
+      .status(err.response?.status || 500)
+      .json({ error: err.response?.data || err.message })
   }
 })
 
@@ -58,7 +66,9 @@ router.get('/conversion/:conversionId', async (req, res) => {
     res.status(response.status).json(response.data)
   } catch (err) {
     console.error('❌ Sound Conversion error:', err.response?.data || err.message)
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message })
+    res
+      .status(err.response?.status || 500)
+      .json({ error: err.response?.data || err.message })
   }
 })
 
