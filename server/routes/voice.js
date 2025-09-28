@@ -8,12 +8,9 @@ const router = express.Router();
 const upload = multer();
 
 const BASE_URL = 'https://api.musicgpt.com/api/public/v1';
-const API_KEY =
-  'oZUxto2nBJQYM88WLXbwUwu0TS8vOcAd7zBNOBWfnvR6MEWPzSyBdOLsr3S02fXXm8F7QKG35m-8kWak8szUFQ';
+const API_KEY = 'oZUxto2nBJQYM88WLXbwUwu0TS8vOcAd7zBNOBWfnvR6MEWPzSyBdOLsr3S02fXXm8F7QKG35m-8kWak8szUFQ';
 
-/**
- * 🎤 دریافت لیست صداها
- */
+/* 🎤 دریافت لیست صداها */
 router.get('/list', async (req, res) => {
   const { limit = 20, page = 0 } = req.query;
   try {
@@ -28,9 +25,7 @@ router.get('/list', async (req, res) => {
   }
 });
 
-/**
- * 🔄 تغییر صدا
- */
+/* 🔄 تغییر صدا */
 router.post('/change', upload.single('audio_file'), async (req, res) => {
   const { audio_url, voice_id, remove_background = 0, pitch = 0 } = req.body;
   const file = req.file;
@@ -57,6 +52,7 @@ router.post('/change', upload.single('audio_file'), async (req, res) => {
       }
     });
 
+    // شامل conversion_id
     res.json(response.data);
   } catch (err) {
     console.error('❌ Voice Change error:', err.response?.data || err.message);
@@ -64,9 +60,7 @@ router.post('/change', upload.single('audio_file'), async (req, res) => {
   }
 });
 
-/**
- * 🔎 بررسی وضعیت تبدیل صدا
- */
+/* 🔎 بررسی وضعیت تبدیل صدا */
 router.get('/status/:conversionId', async (req, res) => {
   const { conversionId } = req.params;
   try {
@@ -74,7 +68,7 @@ router.get('/status/:conversionId', async (req, res) => {
       headers: { Authorization: API_KEY },
       params: {
         conversion_id: conversionId,
-        conversionType: 'VOICE_CONVERSION'  // ✅ اصلاح شد
+        conversionType: 'VOICE_CONVERSION' // ✅ باید این باشد
       }
     });
     res.json(response.data);
