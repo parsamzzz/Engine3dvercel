@@ -8,8 +8,7 @@ const router = express.Router();
 const upload = multer();
 
 const BASE_URL = 'https://api.musicgpt.com/api/public/v1';
-const API_KEY =
-  'oZUxto2nBJQYM88WLXbwUwu0TS8vOcAd7zBNOBWfnvR6MEWPzSyBdOLsr3S02fXXm8F7QKG35m-8kWak8szUFQ';
+const API_KEY = 'YOUR_API_KEY_HERE';
 
 /**
  * 🎤 دریافت لیست صداها
@@ -72,9 +71,9 @@ router.get('/status/:conversionId', async (req, res) => {
   try {
     const response = await axios.get(`${BASE_URL}/byId`, {
       headers: { Authorization: API_KEY },
-      params: { 
+      params: {
         conversion_id: conversionId,
-        conversionType: 'VOICE_CHANGER' // 👈 اضافه شد
+        conversionType: 'VOICE_CONVERSION'  // ✅ اصلاح شد
       }
     });
     res.json(response.data);
