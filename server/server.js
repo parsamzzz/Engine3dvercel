@@ -11,6 +11,8 @@ import textToSpeechRoute from './routes/text-to-speech.js';
 import gemini2Router from './routes/gemini2.js';
 import speechToTextRouter from './routes/speech-to-text.js';
 import musicRouter from './routes/music.js';
+import soundRouter from './routes/sound.js';
+
 
 
 
@@ -40,6 +42,8 @@ app.use('/api/text-to-speech', textToSpeechRoute);
 app.use('/api/gemini2', gemini2Router);
 app.use('/api/speech-to-text', speechToTextRouter);
 app.use('/api/music', musicRouter);
+app.use('/api/sound', soundRouter);
+
 
 
 const BASE_PROMPT = `
