@@ -6,7 +6,7 @@ const router = express.Router();
 
 // 📌 تنظیمات پایه
 const BASE_URL = 'https://api.musicgpt.com/api/public/v1';
-const API_KEY = process.env.MUSICGTP_API_KEY;
+const API_KEY = 'oZUxto2nBJQYM88WLXbwUwu0TS8vOcAd7zBNOBWfnvR6MEWPzSyBdOLsr3S02fXXm8F7QKG35m-8kWak8szUFQ';
 
 /**
  * 🎵 ساخت موزیک با تمام پارامترها
