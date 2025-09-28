@@ -2,7 +2,7 @@
 import express from 'express';
 import multer from 'multer';
 import axios from 'axios';
-import FormData from 'form-data';  // 👈 حتما اضافه کن
+import FormData from 'form-data';
 
 const router = express.Router();
 const upload = multer();
@@ -72,7 +72,10 @@ router.get('/status/:conversionId', async (req, res) => {
   try {
     const response = await axios.get(`${BASE_URL}/byId`, {
       headers: { Authorization: API_KEY },
-      params: { conversion_id: conversionId }
+      params: { 
+        conversion_id: conversionId,
+        conversionType: 'VOICE_CHANGER' // 👈 اضافه شد
+      }
     });
     res.json(response.data);
   } catch (err) {
