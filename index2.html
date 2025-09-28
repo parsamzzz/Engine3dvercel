@@ -42,7 +42,7 @@
   </section>
 
   <script>
-    // 🟢 آدرس بک‌اند (تغییر به دامنه سرور خودت)
+    // 🟢 آدرس بک‌اند
     const BASE_API = 'https://engine3dvercel.onrender.com/api/sound';
 
     let intervalId = null;
@@ -70,21 +70,22 @@
         const json = await res.json();
         document.getElementById('createResult').textContent = JSON.stringify(json, null, 2);
 
-        if (json.task_id) {
-          document.getElementById('statusMsg').textContent = `✅ درخواست ثبت شد. task_id: ${json.task_id} — در حال بررسی وضعیت...`;
-          startAutoCheck(json.task_id);
+        // 👇 استفاده از conversion_id به جای task_id
+        if (json.conversion_id) {
+          document.getElementById('statusMsg').textContent = `✅ درخواست ثبت شد. conversion_id: ${json.conversion_id} — در حال بررسی وضعیت...`;
+          startAutoCheck(json.conversion_id);
         } else {
-          document.getElementById('statusMsg').textContent = '❌ task_id دریافت نشد.';
+          document.getElementById('statusMsg').textContent = '❌ conversion_id دریافت نشد.';
         }
       } catch (err) {
         document.getElementById('createResult').textContent = '❌ خطا: ' + err.message;
       }
     }
 
-    function startAutoCheck(taskId) {
+    function startAutoCheck(conversionId) {
       intervalId = setInterval(async () => {
         try {
-          const res = await fetch(`${BASE_API}/status/${taskId}`);
+          const res = await fetch(`${BASE_API}/status/${conversionId}`);
           const json = await res.json();
           document.getElementById('statusResult').textContent = JSON.stringify(json, null, 2);
 
