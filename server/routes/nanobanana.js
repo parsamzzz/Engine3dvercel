@@ -42,6 +42,8 @@ async function callKieAPI(url, method = "post", data = null, headers = {}) {
 
   while (tried < maxTries) {
     const apiKey = getCurrentKey();
+    console.log(`🔎 تست کلید: ${apiKey}`);
+
     try {
       const resp = await axios({
         url,
@@ -49,28 +51,32 @@ async function callKieAPI(url, method = "post", data = null, headers = {}) {
         data,
         headers: { Authorization: `Bearer ${apiKey}`, ...headers }
       });
-      return { resp, apiKey };
+      return { resp, apiKey };          // موفق
     } catch (err) {
-      const errData = err.response?.data;
-      const errMsg = errData?.msg || errData?.error || "";
+      const status = err.response?.status;
+      const body   = err.response?.data || {};
+      const msg    = body.msg || body.error || body.message || "";
 
-      if (
-        errMsg.includes("INSUFFICIENT_CREDIT") ||
-        errMsg.includes("The current credits are insufficient")
-      ) {
+      const insufficient =
+          msg.toLowerCase().includes("insufficient") ||
+          body.errorCode === "INSUFFICIENT_CREDIT" ||
+          status === 402 || status === 403;
+
+      if (insufficient) {
         console.warn(`❌ اعتبار ناکافی برای کلید ${apiKey}`);
         rotateKey();
         tried++;
-      } else {
-        throw err;
+        continue;                       // تست کلید بعدی
       }
+
+      throw err;                         // خطای دیگر
     }
   }
-  throw new Error("❌ تمام کلیدها اعتبار ندارند.");
+  throw new Error("❌ تمام کلیدها اعتبار ندارند یا پاسخ ندادند.");
 }
 
 /* ===================================================
-   0) 📤 آپلود
+   0) 📤 آپلود چند عکس
 =================================================== */
 router.post("/upload", upload.array("files", 10), async (req, res) => {
   try {
@@ -101,16 +107,10 @@ router.post("/upload", upload.array("files", 10), async (req, res) => {
       urls.push(data.data.downloadUrl);
     }
 
-    res.json({
-      success: true,
-      count: urls.length,
-      urls
-    });
+    res.json({ success: true, count: urls.length, urls });
   } catch (err) {
     console.error("Upload error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({
-      error: err.response?.data || err.message
-    });
+    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
   }
 });
 
@@ -127,17 +127,13 @@ router.post("/nano-banana", async (req, res) => {
       "post",
       { model: "google/nano-banana", input: { prompt, output_format, image_size } }
     );
-
     console.info(`✅ Generate با کلید ${apiKey}`);
     const images = resp.data.result?.images || [];
-    images.forEach((_, idx) => console.info(`🖼️ [Generate] تصویر شماره ${idx + 1} تولید شد.`));
-
+    images.forEach((_, i) => console.info(`🖼️ [Generate] تصویر شماره ${i + 1} تولید شد.`));
     res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Nano-Banana error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({
-      error: err.response?.data || err.message
-    });
+    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
   }
 });
 
@@ -147,9 +143,7 @@ router.post("/nano-banana", async (req, res) => {
 router.post("/nano-banana-edit", async (req, res) => {
   const { prompt, image_urls = [], output_format = "png", image_size = "auto" } = req.body;
   if (!prompt || image_urls.length === 0)
-    return res.status(400).json({
-      error: "❌ فیلدهای prompt و image_urls الزامی هستند."
-    });
+    return res.status(400).json({ error: "❌ فیلدهای prompt و image_urls الزامی هستند." });
 
   try {
     const { resp, apiKey } = await callKieAPI(
@@ -157,17 +151,13 @@ router.post("/nano-banana-edit", async (req, res) => {
       "post",
       { model: "google/nano-banana-edit", input: { prompt, image_urls, output_format, image_size } }
     );
-
     console.info(`✅ Edit با کلید ${apiKey}`);
     const images = resp.data.result?.images || [];
-    images.forEach((_, idx) => console.info(`🖼️ [Edit] تصویر شماره ${idx + 1} آماده شد.`));
-
+    images.forEach((_, i) => console.info(`🖼️ [Edit] تصویر شماره ${i + 1} آماده شد.`));
     res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Nano-Banana-Edit error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({
-      error: err.response?.data || err.message
-    });
+    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
   }
 });
 
@@ -184,16 +174,11 @@ router.post("/nano-banana-upscale", async (req, res) => {
       "post",
       { model: "nano-banana-upscale", input: { image, scale, face_enhance } }
     );
-
     console.info(`✅ Upscale با کلید ${apiKey}`);
-    console.info(`🖼️ [Upscale] تصویر بزرگ‌سازی شد.`);
-
     res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Nano-Banana-Upscale error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({
-      error: err.response?.data || err.message
-    });
+    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
   }
 });
 
@@ -210,9 +195,7 @@ router.get("/query", async (req, res) => {
     res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Query error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({
-      error: err.response?.data || err.message
-    });
+    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
   }
 });
 
