@@ -7,15 +7,15 @@ const router = express.Router();
 
 // 🟢 لیست کلیدها برای چرخش
 const API_KEYS = [
-  "828f4fab056e4c17e258627f565e4bea",
   "c006c66c221ee0c23cde17de77270287",
   "6fc5e05a21fb41e134ea649808a91c82",
   "6d96b5b46d848fcb4cd88acbf042d405",
-  "0f9bdb36d440739875f639587e6c804f",
-  "5c929a98dfb9cb756aa7bb158524a0d3"
+"0f9bdb36d440739875f639587e6c804f",
+"5c929a98dfb9cb756aa7bb158524a0d3"
+
 ];
 
-// 🟢 انتخاب کلید
+// 🟢 تابع انتخاب کلید بعدی
 let currentKeyIndex = 0;
 function getCurrentKey() {
   return API_KEYS[currentKeyIndex];
@@ -30,11 +30,11 @@ const KIE_CREATE_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const KIE_QUERY_URL  = "https://api.kie.ai/api/v1/jobs/recordInfo";
 const KIE_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-stream-upload";
 
-// ⚙️ multer
+// ⚙️ multer: اجازه چند فایل
 const upload = multer({ storage: multer.memoryStorage() });
 
 /* ===================================================
-   🔄 فراخوانی API با مدیریت خطای اعتبار
+   🔄 تابع عمومی برای فراخوانی API با مدیریت خطای اعتبار
 =================================================== */
 async function callKieAPI(url, method = "post", data = null, headers = {}) {
   let tried = 0;
@@ -42,8 +42,6 @@ async function callKieAPI(url, method = "post", data = null, headers = {}) {
 
   while (tried < maxTries) {
     const apiKey = getCurrentKey();
-    console.log(`🔎 تست کلید: ${apiKey}`);
-
     try {
       const resp = await axios({
         url,
@@ -51,28 +49,19 @@ async function callKieAPI(url, method = "post", data = null, headers = {}) {
         data,
         headers: { Authorization: `Bearer ${apiKey}`, ...headers }
       });
-      return { resp, apiKey };          // موفق
+      return { resp, apiKey };  // موفق
     } catch (err) {
-      const status = err.response?.status;
-      const body   = err.response?.data || {};
-      const msg    = body.msg || body.error || body.message || "";
-
-      const insufficient =
-          msg.toLowerCase().includes("insufficient") ||
-          body.errorCode === "INSUFFICIENT_CREDIT" ||
-          status === 402 || status === 403;
-
-      if (insufficient) {
+      const errData = err.response?.data;
+      if (errData?.error?.includes("INSUFFICIENT_CREDIT")) {
         console.warn(`❌ اعتبار ناکافی برای کلید ${apiKey}`);
-        rotateKey();
+        rotateKey(); // کلید بعدی
         tried++;
-        continue;                       // تست کلید بعدی
+      } else {
+        throw err;  // خطای دیگر
       }
-
-      throw err;                         // خطای دیگر
     }
   }
-  throw new Error("❌ تمام کلیدها اعتبار ندارند یا پاسخ ندادند.");
+  throw new Error("❌ تمام کلیدها اعتبار ندارند.");
 }
 
 /* ===================================================
@@ -107,10 +96,16 @@ router.post("/upload", upload.array("files", 10), async (req, res) => {
       urls.push(data.data.downloadUrl);
     }
 
-    res.json({ success: true, count: urls.length, urls });
+    res.json({
+      success: true,
+      count: urls.length,
+      urls
+    });
   } catch (err) {
     console.error("Upload error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data || err.message
+    });
   }
 });
 
@@ -127,13 +122,17 @@ router.post("/nano-banana", async (req, res) => {
       "post",
       { model: "google/nano-banana", input: { prompt, output_format, image_size } }
     );
+
     console.info(`✅ Generate با کلید ${apiKey}`);
     const images = resp.data.result?.images || [];
-    images.forEach((_, i) => console.info(`🖼️ [Generate] تصویر شماره ${i + 1} تولید شد.`));
+    images.forEach((_, idx) => console.info(`🖼️ [Generate] تصویر شماره ${idx + 1} تولید شد.`));
+
     res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Nano-Banana error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data || err.message
+    });
   }
 });
 
@@ -143,7 +142,9 @@ router.post("/nano-banana", async (req, res) => {
 router.post("/nano-banana-edit", async (req, res) => {
   const { prompt, image_urls = [], output_format = "png", image_size = "auto" } = req.body;
   if (!prompt || image_urls.length === 0)
-    return res.status(400).json({ error: "❌ فیلدهای prompt و image_urls الزامی هستند." });
+    return res.status(400).json({
+      error: "❌ فیلدهای prompt و image_urls الزامی هستند."
+    });
 
   try {
     const { resp, apiKey } = await callKieAPI(
@@ -151,13 +152,17 @@ router.post("/nano-banana-edit", async (req, res) => {
       "post",
       { model: "google/nano-banana-edit", input: { prompt, image_urls, output_format, image_size } }
     );
+
     console.info(`✅ Edit با کلید ${apiKey}`);
     const images = resp.data.result?.images || [];
-    images.forEach((_, i) => console.info(`🖼️ [Edit] تصویر شماره ${i + 1} آماده شد.`));
+    images.forEach((_, idx) => console.info(`🖼️ [Edit] تصویر شماره ${idx + 1} آماده شد.`));
+
     res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Nano-Banana-Edit error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data || err.message
+    });
   }
 });
 
@@ -174,11 +179,16 @@ router.post("/nano-banana-upscale", async (req, res) => {
       "post",
       { model: "nano-banana-upscale", input: { image, scale, face_enhance } }
     );
+
     console.info(`✅ Upscale با کلید ${apiKey}`);
+    console.info(`🖼️ [Upscale] تصویر بزرگ‌سازی شد.`);
+
     res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Nano-Banana-Upscale error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data || err.message
+    });
   }
 });
 
@@ -190,12 +200,15 @@ router.get("/query", async (req, res) => {
   if (!taskId) return res.status(400).json({ error: "❌ پارامتر taskId الزامی است." });
 
   try {
+    // از همان کلید جاری (آخرین موفق) استفاده می‌کند
     const { resp, apiKey } = await callKieAPI(`${KIE_QUERY_URL}?taskId=${taskId}`, "get");
     console.info(`✅ Query با کلید ${apiKey}`);
     res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Query error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data || err.message
+    });
   }
 });
 
