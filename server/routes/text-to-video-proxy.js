@@ -11,6 +11,8 @@ router.options('*', cors());
 // کلید API (بهتر است از env گرفته شود)
 const API_KEY = process.env.AIVIDEO_API_KEY || '078146981ef7d340a1f118a54db40dbf';
 
+let videoCounter = 0; // شمارنده ویدیوها برای لاگ
+
 // ==============================
 // POST /api/text-to-video
 // تولید ویدیو از متن
@@ -59,6 +61,10 @@ router.post('/', async (req, res) => {
         },
       }
     );
+
+    // افزایش شمارنده و لاگ شماره ویدیو
+    videoCounter++;
+    console.info(`🎬 [Text-to-Video] ویدیو شماره ${videoCounter} تولید شد.`);
 
     res.status(response.status).json(response.data);
   } catch (error) {
@@ -127,6 +133,10 @@ router.get('/video-proxy', async (req, res) => {
     if (!videoUrl) {
       return res.status(404).json({ error: 'Video URL not available yet' });
     }
+
+    // لاگ شماره‌گذاری هنگام دریافت ویدیو
+    videoCounter++;
+    console.info(`📥 [Video-Proxy] ویدیو شماره ${videoCounter} دریافت شد.`);
 
     const videoResponse = await axios.get(videoUrl, { responseType: 'stream' });
 

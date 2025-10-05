@@ -10,6 +10,8 @@ router.options('*', cors())
 
 const API_KEY = process.env.AIVIDEO_API_KEY || '775c73df35b32e215ad4ec0178462cbf'
 
+let videoCounter = 0 // شمارنده لاگ ویدیوها
+
 router.post('/', async (req, res) => {
   try {
     const {
@@ -50,6 +52,10 @@ router.post('/', async (req, res) => {
         timeout: 30000,
       }
     )
+
+    // لاگ شماره‌گذاری برای ویدیو تولید شده
+    videoCounter++
+    console.info(`🎬 [Video Generate] ویدیو شماره ${videoCounter} تولید شد.`)
 
     res.status(response.status).json(response.data)
   } catch (error) {

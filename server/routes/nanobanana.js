@@ -1,4 +1,3 @@
-// routes/nanobanana.js
 import express from "express";
 import axios from "axios";
 import multer from "multer";
@@ -64,7 +63,7 @@ router.post("/upload", upload.array("files", 10), async (req, res) => {
 });
 
 /* ===================================================
-   1) 🟢 Generate Image
+   1) 🟢 Generate Image با لاگ شماره‌گذاری
 =================================================== */
 router.post("/nano-banana", async (req, res) => {
   const { prompt, output_format = "png", image_size = "auto" } = req.body;
@@ -76,6 +75,13 @@ router.post("/nano-banana", async (req, res) => {
       { model: "google/nano-banana", input: { prompt, output_format, image_size } },
       { headers: { Authorization: `Bearer ${API_KEY}` } }
     );
+
+    // لاگ برای هر تصویر تولید شده
+    const images = response.data.result?.images || [];
+    images.forEach((img, idx) => {
+      console.info(`🖼️ [Generate] تصویر شماره ${idx + 1} تولید شد.`);
+    });
+
     res.status(response.status).json(response.data);
   } catch (err) {
     console.error("Nano-Banana error:", err.response?.data || err.message);
@@ -86,7 +92,7 @@ router.post("/nano-banana", async (req, res) => {
 });
 
 /* ===================================================
-   2) ✏️ Edit Image
+   2) ✏️ Edit Image با لاگ شماره‌گذاری
 =================================================== */
 router.post("/nano-banana-edit", async (req, res) => {
   const { prompt, image_urls = [], output_format = "png", image_size = "auto" } = req.body;
@@ -101,6 +107,13 @@ router.post("/nano-banana-edit", async (req, res) => {
       { model: "google/nano-banana-edit", input: { prompt, image_urls, output_format, image_size } },
       { headers: { Authorization: `Bearer ${API_KEY}` } }
     );
+
+    // لاگ برای هر تصویر ویرایش شده
+    const images = response.data.result?.images || [];
+    images.forEach((img, idx) => {
+      console.info(`🖼️ [Edit] تصویر شماره ${idx + 1} آماده شد.`);
+    });
+
     res.status(response.status).json(response.data);
   } catch (err) {
     console.error("Nano-Banana-Edit error:", err.response?.data || err.message);
@@ -123,6 +136,10 @@ router.post("/nano-banana-upscale", async (req, res) => {
       { model: "nano-banana-upscale", input: { image, scale, face_enhance } },
       { headers: { Authorization: `Bearer ${API_KEY}` } }
     );
+
+    // لاگ برای تصویر بزرگ‌سازی شده
+    console.info(`🖼️ [Upscale] تصویر بزرگ‌سازی شد.`);
+
     res.status(response.status).json(response.data);
   } catch (err) {
     console.error("Nano-Banana-Upscale error:", err.response?.data || err.message);
