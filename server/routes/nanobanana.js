@@ -7,7 +7,7 @@ import FormData from "form-data";
 const router = express.Router();
 
 // ثابت‌ها
-const API_KEY = "5c929a98dfb9cb756aa7bb158524a0d3";
+const API_KEY = "e497ee9a169a6bac8dd9bd6d9db0775e";
 const KIE_CREATE_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const KIE_QUERY_URL  = "https://api.kie.ai/api/v1/jobs/recordInfo";
 const KIE_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-stream-upload";

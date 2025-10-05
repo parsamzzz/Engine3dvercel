@@ -8,7 +8,7 @@ const router = express.Router()
 router.use(cors())
 router.options('*', cors())
 
-const API_KEY = process.env.AIVIDEO_API_KEY || 'f4901986a7c2a8671621d283c6133b5f'
+const API_KEY = process.env.AIVIDEO_API_KEY || '775c73df35b32e215ad4ec0178462cbf'
 
 router.post('/', async (req, res) => {
   try {
