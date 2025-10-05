@@ -11,12 +11,11 @@ const API_KEYS = [
   "c006c66c221ee0c23cde17de77270287",
   "6fc5e05a21fb41e134ea649808a91c82",
   "6d96b5b46d848fcb4cd88acbf042d405",
-"0f9bdb36d440739875f639587e6c804f",
-"5c929a98dfb9cb756aa7bb158524a0d3"
-
+  "0f9bdb36d440739875f639587e6c804f",
+  "5c929a98dfb9cb756aa7bb158524a0d3"
 ];
 
-// 🟢 تابع انتخاب کلید بعدی
+// 🟢 انتخاب کلید
 let currentKeyIndex = 0;
 function getCurrentKey() {
   return API_KEYS[currentKeyIndex];
@@ -31,11 +30,11 @@ const KIE_CREATE_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const KIE_QUERY_URL  = "https://api.kie.ai/api/v1/jobs/recordInfo";
 const KIE_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-stream-upload";
 
-// ⚙️ multer: اجازه چند فایل
+// ⚙️ multer
 const upload = multer({ storage: multer.memoryStorage() });
 
 /* ===================================================
-   🔄 تابع عمومی برای فراخوانی API با مدیریت خطای اعتبار
+   🔄 فراخوانی API با مدیریت خطای اعتبار
 =================================================== */
 async function callKieAPI(url, method = "post", data = null, headers = {}) {
   let tried = 0;
@@ -50,15 +49,20 @@ async function callKieAPI(url, method = "post", data = null, headers = {}) {
         data,
         headers: { Authorization: `Bearer ${apiKey}`, ...headers }
       });
-      return { resp, apiKey };  // موفق
+      return { resp, apiKey };
     } catch (err) {
       const errData = err.response?.data;
-      if (errData?.error?.includes("INSUFFICIENT_CREDIT")) {
+      const errMsg = errData?.msg || errData?.error || "";
+
+      if (
+        errMsg.includes("INSUFFICIENT_CREDIT") ||
+        errMsg.includes("The current credits are insufficient")
+      ) {
         console.warn(`❌ اعتبار ناکافی برای کلید ${apiKey}`);
-        rotateKey(); // کلید بعدی
+        rotateKey();
         tried++;
       } else {
-        throw err;  // خطای دیگر
+        throw err;
       }
     }
   }
@@ -66,7 +70,7 @@ async function callKieAPI(url, method = "post", data = null, headers = {}) {
 }
 
 /* ===================================================
-   0) 📤 آپلود چند عکس
+   0) 📤 آپلود
 =================================================== */
 router.post("/upload", upload.array("files", 10), async (req, res) => {
   try {
@@ -201,7 +205,6 @@ router.get("/query", async (req, res) => {
   if (!taskId) return res.status(400).json({ error: "❌ پارامتر taskId الزامی است." });
 
   try {
-    // از همان کلید جاری (آخرین موفق) استفاده می‌کند
     const { resp, apiKey } = await callKieAPI(`${KIE_QUERY_URL}?taskId=${taskId}`, "get");
     console.info(`✅ Query با کلید ${apiKey}`);
     res.status(resp.status).json(resp.data);
