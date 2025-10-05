@@ -5,8 +5,28 @@ import FormData from "form-data";
 
 const router = express.Router();
 
-// ثابت‌ها
-const API_KEY = "828f4fab056e4c17e258627f565e4bea";
+// 🟢 لیست کلیدها برای چرخش
+const API_KEYS = [
+  "828f4fab056e4c17e258627f565e4bea",
+  "c006c66c221ee0c23cde17de77270287",
+  "6fc5e05a21fb41e134ea649808a91c82",
+  "6d96b5b46d848fcb4cd88acbf042d405",
+"0f9bdb36d440739875f639587e6c804f",
+"5c929a98dfb9cb756aa7bb158524a0d3"
+
+];
+
+// 🟢 تابع انتخاب کلید بعدی
+let currentKeyIndex = 0;
+function getCurrentKey() {
+  return API_KEYS[currentKeyIndex];
+}
+function rotateKey() {
+  currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+  console.warn("🔑 کلید بعدی انتخاب شد:", getCurrentKey());
+}
+
+// 📌 ثابت‌ها
 const KIE_CREATE_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const KIE_QUERY_URL  = "https://api.kie.ai/api/v1/jobs/recordInfo";
 const KIE_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-stream-upload";
@@ -15,7 +35,38 @@ const KIE_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-stream-upload";
 const upload = multer({ storage: multer.memoryStorage() });
 
 /* ===================================================
-   0) 📤 آپلود چند عکس و گرفتن لینک‌ها
+   🔄 تابع عمومی برای فراخوانی API با مدیریت خطای اعتبار
+=================================================== */
+async function callKieAPI(url, method = "post", data = null, headers = {}) {
+  let tried = 0;
+  const maxTries = API_KEYS.length;
+
+  while (tried < maxTries) {
+    const apiKey = getCurrentKey();
+    try {
+      const resp = await axios({
+        url,
+        method,
+        data,
+        headers: { Authorization: `Bearer ${apiKey}`, ...headers }
+      });
+      return { resp, apiKey };  // موفق
+    } catch (err) {
+      const errData = err.response?.data;
+      if (errData?.error?.includes("INSUFFICIENT_CREDIT")) {
+        console.warn(`❌ اعتبار ناکافی برای کلید ${apiKey}`);
+        rotateKey(); // کلید بعدی
+        tried++;
+      } else {
+        throw err;  // خطای دیگر
+      }
+    }
+  }
+  throw new Error("❌ تمام کلیدها اعتبار ندارند.");
+}
+
+/* ===================================================
+   0) 📤 آپلود چند عکس
 =================================================== */
 router.post("/upload", upload.array("files", 10), async (req, res) => {
   try {
@@ -24,28 +75,25 @@ router.post("/upload", upload.array("files", 10), async (req, res) => {
     }
 
     const urls = [];
-
-    // برای هر فایل یک درخواست آپلود
     for (const file of req.files) {
       const formData = new FormData();
       formData.append("file", file.buffer, file.originalname);
       formData.append("uploadPath", "images/user-uploads");
 
-      const uploadResp = await axios.post(KIE_UPLOAD_URL, formData, {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          ...formData.getHeaders()
-        }
-      });
+      const { resp } = await callKieAPI(
+        KIE_UPLOAD_URL,
+        "post",
+        formData,
+        formData.getHeaders()
+      );
 
-      const data = uploadResp.data;
+      const data = resp.data;
       if (!data.success) {
         return res.status(500).json({
           error: "❌ آپلود یکی از فایل‌ها شکست خورد.",
           raw: data
         });
       }
-
       urls.push(data.data.downloadUrl);
     }
 
@@ -63,26 +111,24 @@ router.post("/upload", upload.array("files", 10), async (req, res) => {
 });
 
 /* ===================================================
-   1) 🟢 Generate Image با لاگ شماره‌گذاری
+   1) 🟢 Generate Image
 =================================================== */
 router.post("/nano-banana", async (req, res) => {
   const { prompt, output_format = "png", image_size = "auto" } = req.body;
   if (!prompt) return res.status(400).json({ error: "❌ فیلد prompt الزامی است." });
 
   try {
-    const response = await axios.post(
+    const { resp, apiKey } = await callKieAPI(
       KIE_CREATE_URL,
-      { model: "google/nano-banana", input: { prompt, output_format, image_size } },
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+      "post",
+      { model: "google/nano-banana", input: { prompt, output_format, image_size } }
     );
 
-    // لاگ برای هر تصویر تولید شده
-    const images = response.data.result?.images || [];
-    images.forEach((img, idx) => {
-      console.info(`🖼️ [Generate] تصویر شماره ${idx + 1} تولید شد.`);
-    });
+    console.info(`✅ Generate با کلید ${apiKey}`);
+    const images = resp.data.result?.images || [];
+    images.forEach((_, idx) => console.info(`🖼️ [Generate] تصویر شماره ${idx + 1} تولید شد.`));
 
-    res.status(response.status).json(response.data);
+    res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Nano-Banana error:", err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
@@ -92,7 +138,7 @@ router.post("/nano-banana", async (req, res) => {
 });
 
 /* ===================================================
-   2) ✏️ Edit Image با لاگ شماره‌گذاری
+   2) ✏️ Edit Image
 =================================================== */
 router.post("/nano-banana-edit", async (req, res) => {
   const { prompt, image_urls = [], output_format = "png", image_size = "auto" } = req.body;
@@ -102,19 +148,17 @@ router.post("/nano-banana-edit", async (req, res) => {
     });
 
   try {
-    const response = await axios.post(
+    const { resp, apiKey } = await callKieAPI(
       KIE_CREATE_URL,
-      { model: "google/nano-banana-edit", input: { prompt, image_urls, output_format, image_size } },
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+      "post",
+      { model: "google/nano-banana-edit", input: { prompt, image_urls, output_format, image_size } }
     );
 
-    // لاگ برای هر تصویر ویرایش شده
-    const images = response.data.result?.images || [];
-    images.forEach((img, idx) => {
-      console.info(`🖼️ [Edit] تصویر شماره ${idx + 1} آماده شد.`);
-    });
+    console.info(`✅ Edit با کلید ${apiKey}`);
+    const images = resp.data.result?.images || [];
+    images.forEach((_, idx) => console.info(`🖼️ [Edit] تصویر شماره ${idx + 1} آماده شد.`));
 
-    res.status(response.status).json(response.data);
+    res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Nano-Banana-Edit error:", err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
@@ -131,16 +175,16 @@ router.post("/nano-banana-upscale", async (req, res) => {
   if (!image) return res.status(400).json({ error: "❌ فیلد image الزامی است." });
 
   try {
-    const response = await axios.post(
+    const { resp, apiKey } = await callKieAPI(
       KIE_CREATE_URL,
-      { model: "nano-banana-upscale", input: { image, scale, face_enhance } },
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+      "post",
+      { model: "nano-banana-upscale", input: { image, scale, face_enhance } }
     );
 
-    // لاگ برای تصویر بزرگ‌سازی شده
+    console.info(`✅ Upscale با کلید ${apiKey}`);
     console.info(`🖼️ [Upscale] تصویر بزرگ‌سازی شد.`);
 
-    res.status(response.status).json(response.data);
+    res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Nano-Banana-Upscale error:", err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
@@ -157,10 +201,10 @@ router.get("/query", async (req, res) => {
   if (!taskId) return res.status(400).json({ error: "❌ پارامتر taskId الزامی است." });
 
   try {
-    const response = await axios.get(`${KIE_QUERY_URL}?taskId=${taskId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
-    res.status(response.status).json(response.data);
+    // از همان کلید جاری (آخرین موفق) استفاده می‌کند
+    const { resp, apiKey } = await callKieAPI(`${KIE_QUERY_URL}?taskId=${taskId}`, "get");
+    console.info(`✅ Query با کلید ${apiKey}`);
+    res.status(resp.status).json(resp.data);
   } catch (err) {
     console.error("Query error:", err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
