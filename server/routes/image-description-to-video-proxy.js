@@ -4,7 +4,7 @@ import axios from 'axios'
 
 const router = express.Router()
 
-const API_KEY = process.env.AIVIDEO_API_KEY || 'a3e7269aad98b3ba23de34440ff01b1f'
+const API_KEY = process.env.AIVIDEO_API_KEY || '775c73df35b32e215ad4ec0178462cbf'
 
 // فعال‌سازی CORS بدون محدودیت
 router.use(cors())
