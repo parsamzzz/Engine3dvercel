@@ -6,12 +6,10 @@ const router = express.Router()
 
 const API_KEY = process.env.AIVIDEO_API_KEY || '775c73df35b32e215ad4ec0178462cbf'
 
-// فعال‌سازی CORS بدون محدودیت
 router.use(cors())
 router.options('*', cors())
 
-let videoCounter = 0 // شمارنده لاگ ویدیوها
-
+let videoCounter = 0 
 router.post('/', async (req, res) => {
   try {
     const {
