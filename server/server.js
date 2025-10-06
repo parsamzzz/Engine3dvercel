@@ -18,6 +18,7 @@ import imageDescriptionToVideoProxy from './routes/image-description-to-video-pr
 import imageToVideoProxy from './routes/image-to-video-proxy.js';
 import textToVideoProxy from './routes/text-to-video-proxy.js';
 import sora2Route from './routes/sora2.js';
+import universalRoute from './routes/universal.js';
 
 
 
@@ -60,6 +61,8 @@ app.use('/api/image-description-to-video', imageDescriptionToVideoProxy);
 app.use('/api/image-to-video', imageToVideoProxy);
 
 app.use('/api/sora2', sora2Route);
+app.use('/api/universal', universalRoute);
+
 
 
 

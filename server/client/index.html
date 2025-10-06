@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THREEDIFY</title>
+
+  <!-- Tailwind برای display و رنگ‌ها -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- CSS اختصاصی -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dark h-screen overflow-hidden">
+  <!-- Header -->
+  <header class="h-12 flex items-center justify-between px-4">
+    <div class="flex items-center gap-2">
+      <img src="logo/dark.webp" alt="THREEDIFY Logo" class="h-8 w-auto rounded-sm">
+      <span class="font-semibold text-sky-400 text-sm">THREEDIFY</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-1 text-sm font-medium text-yellow-400">
+        <span>🪙</span><span id="creditAmount">120</span>
+      </div>
+      <img src="https://i.pravatar.cc/40" alt="Profile" class="w-8 h-8 rounded-full border border-white/20">
+      <button id="themeToggle" class="btn-primary text-xs">Switch Theme</button>
+    </div>
+  </header>
+
+  <!-- Main layout -->
+  <main class="h-[calc(100vh-48px)] grid grid-cols-[60px_280px_auto_320px]">
+    
+    <!-- Sidebar -->
+    <aside class="divider-r flex flex-col items-center">
+      <div class="cat-btn active" data-cat="image">🖼️<span>Image</span></div>
+      <div class="cat-btn" data-cat="video">🎥<span>Video</span></div>
+      <div class="cat-btn" data-cat="audio">🎙️<span>Audio</span></div>
+      <div class="cat-btn" data-cat="music">🎵<span>Music</span></div>
+      <div class="cat-btn" data-cat="3d">🧊<span>3D</span></div>
+    </aside>
+
+    <!-- Prompt Panel -->
+    <aside class="divider-r flex flex-col overflow-y-auto">
+      <div id="panelTitle" class="text-sky-400 font-semibold p-4 border-b border-white/10 flex items-center gap-2">
+        <img id="selectedModelLogo" src="" alt="" class="h-5 w-5 hidden">
+        <span id="selectedModelName"></span>
+      </div>
+      <div id="panelContent" class="flex-1 space-y-4 p-4 text-sm"></div>
+      <div class="generate-fixed flex items-center justify-between gap-3">
+        <button id="generateBtn" class="btn-primary flex-1">Generate</button>
+        <div class="flex items-center gap-1 text-sm font-medium text-yellow-400">
+          <span>🪙</span><span id="coinAmount">120</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Preview -->
+    <section class="divider-l preview-wrap relative">
+      <div id="previewIconsBar" class="preview-icons-bar">
+        <div id="previewContent" class="preview-grid"></div>
+      </div>
+      <button class="arrow-btn arrow-left" id="arrowLeft">❮</button>
+      <button class="arrow-btn arrow-right" id="arrowRight">❯</button>
+      <div class="absolute inset-0 flex flex-col justify-center items-center pointer-events-none gap-2">
+        <div class="w-20 h-20 border border-dashed border-gray-400/50 rounded-lg flex items-center justify-center text-3xl opacity-70">👁️</div>
+        <span class="text-gray-400 text-lg font-semibold">PREVIEW</span>
+      </div>
+    </section>
+
+    <!-- Assets -->
+    <aside class="divider-l flex flex-col p-3 overflow-y-auto">
+      <div class="flex items-center gap-2 mb-3">
+        <input type="text" placeholder="Search…" class="input-dark text-xs flex-1">
+        <button class="btn-primary text-xs px-2 py-1">Upload</button>
+      </div>
+      <div class="space-y-2 text-sm">
+        <div class="flex items-center gap-3 bg-black/20 p-2 rounded hover:bg-black/30 cursor-pointer">
+          <img src="logo/generated-upscaled (3).png" class="w-14 h-14 rounded object-cover">
+          <div>
+            <p class="font-medium">Sample Asset</p>
+            <p class="text-xs opacity-60">1 asset</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+    
+  </main>
+
+  <!-- JS اختصاصی -->
+  <script src="script.js"></script>
+</body>
+</html>
