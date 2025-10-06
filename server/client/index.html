@@ -5,15 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>THREEDIFY</title>
 
-  <!-- Tailwind برای display و رنگ‌ها -->
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- CSS اختصاصی -->
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body class="dark h-screen overflow-hidden">
-  <!-- Header -->
+
+  <!-- 🔹 Header -->
   <header class="h-12 flex items-center justify-between px-4">
     <div class="flex items-center gap-2">
       <img src="logo/dark.webp" alt="THREEDIFY Logo" class="h-8 w-auto rounded-sm">
@@ -28,10 +27,10 @@
     </div>
   </header>
 
-  <!-- Main layout -->
+  <!-- 🔹 Main Layout -->
   <main class="h-[calc(100vh-48px)] grid grid-cols-[60px_280px_auto_320px]">
-    
-    <!-- Sidebar -->
+
+    <!-- 🔸 Sidebar -->
     <aside class="divider-r flex flex-col items-center">
       <div class="cat-btn active" data-cat="image">🖼️<span>Image</span></div>
       <div class="cat-btn" data-cat="video">🎥<span>Video</span></div>
@@ -40,13 +39,15 @@
       <div class="cat-btn" data-cat="3d">🧊<span>3D</span></div>
     </aside>
 
-    <!-- Prompt Panel -->
+    <!-- 🔸 Prompt Panel -->
     <aside class="divider-r flex flex-col overflow-y-auto">
       <div id="panelTitle" class="text-sky-400 font-semibold p-4 border-b border-white/10 flex items-center gap-2">
         <img id="selectedModelLogo" src="" alt="" class="h-5 w-5 hidden">
         <span id="selectedModelName"></span>
       </div>
       <div id="panelContent" class="flex-1 space-y-4 p-4 text-sm"></div>
+
+      <!-- 🔸 Generate Button -->
       <div class="generate-fixed flex items-center justify-between gap-3">
         <button id="generateBtn" class="btn-primary flex-1">Generate</button>
         <div class="flex items-center gap-1 text-sm font-medium text-yellow-400">
@@ -55,7 +56,7 @@
       </div>
     </aside>
 
-    <!-- Preview -->
+    <!-- 🔸 Preview -->
     <section class="divider-l preview-wrap relative">
       <div id="previewIconsBar" class="preview-icons-bar">
         <div id="previewContent" class="preview-grid"></div>
@@ -68,7 +69,7 @@
       </div>
     </section>
 
-    <!-- Assets -->
+    <!-- 🔸 Assets -->
     <aside class="divider-l flex flex-col p-3 overflow-y-auto">
       <div class="flex items-center gap-2 mb-3">
         <input type="text" placeholder="Search…" class="input-dark text-xs flex-1">
@@ -87,7 +88,7 @@
     
   </main>
 
-  <!-- JS اختصاصی -->
+  <!-- 🔹 JS -->
   <script src="script.js"></script>
 </body>
 </html>
