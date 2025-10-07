@@ -7,7 +7,7 @@ import fetch from 'node-fetch';
 const router = express.Router();
 
 /* 🔑 API Key و URLها */
-const API_KEY =   'ec65126f0436d75efd1d16e77a3c8a59';   // ⬅️ کلید Kie AI خودتان
+const API_KEY =   'fac105c08533a86660dd83d6fb0a49ef';   // ⬅️ کلید Kie AI خودتان
 const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
 const CREATE_TASK_URL = 'https://api.kie.ai/api/v1/jobs/createTask';
 const RECORD_INFO_URL = 'https://api.kie.ai/api/v1/jobs/recordInfo';
