@@ -7,7 +7,7 @@ import fetch from 'node-fetch';
 const router = express.Router();
 
 /* 🔑 API Key و URLها */
-const API_KEY = '519384c53845320baee5ab7954d12eaa';   // ⬅️ کلید Kie AI خودتان
+const API_KEY =   '6a77ff27b02832937a8da5b76a08295c';   // ⬅️ کلید Kie AI خودتان
 const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
 const CREATE_TASK_URL = 'https://api.kie.ai/api/v1/jobs/createTask';
 const RECORD_INFO_URL = 'https://api.kie.ai/api/v1/jobs/recordInfo';
@@ -23,13 +23,7 @@ router.get('/', (req, res) => {
 /* 📤 ایجاد Task جدید */
 router.post('/createTask', upload.single('image'), async (req, res) => {
   try {
-    const {
-      model,
-      prompt,
-      aspect_ratio,
-      quality,
-      callBackUrl
-    } = req.body;
+    const { model, prompt, aspect_ratio, callBackUrl } = req.body;
 
     if (!model || !prompt) {
       return res.status(400).json({ error: '❌ model و prompt الزامی هستند.' });
@@ -37,8 +31,18 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
 
     let image_url = null;
 
-    // 🟡 آپلود تصویر (درصورت وجود)
+    // 🟡 بررسی و آپلود تصویر
     if (req.file) {
+      const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+      const maxSize = 30 * 1024 * 1024; // 30MB
+
+      if (!allowed.includes(req.file.mimetype)) {
+        return res.status(400).json({ error: '❌ فرمت فایل مجاز نیست (PNG/JPG/WEBP).' });
+      }
+      if (req.file.size > maxSize) {
+        return res.status(400).json({ error: '❌ حجم فایل باید کمتر از 30MB باشد.' });
+      }
+
       const formData = new FormData();
       formData.append('file', req.file.buffer, req.file.originalname);
       formData.append('uploadPath', 'images/user-uploads');
@@ -63,7 +67,6 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
     // 🟢 ساخت ورودی برای ایجاد Task
     const input = { prompt };
     if (aspect_ratio) input.aspect_ratio = aspect_ratio;
-    if (quality) input.quality = quality;
 
     if (image_url && model.includes('image-to-video')) {
       input.image_urls = [image_url];
@@ -94,7 +97,7 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err.response?.data || err.message);
+    console.error('[CreateTask Error]:', err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
       error: err.response?.data || err.message
     });
@@ -115,7 +118,7 @@ router.get('/recordInfo/:taskId', async (req, res) => {
 
     res.status(200).json(statusResp.data);
   } catch (err) {
-    console.error(err.response?.data || err.message);
+    console.error('[RecordInfo Error]:', err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
       error: err.response?.data || err.message
     });
