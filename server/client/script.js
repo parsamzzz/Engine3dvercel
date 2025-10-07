@@ -169,10 +169,26 @@ function renderPreview(cat) {
           limitSpan.innerHTML = `📤 Click or Drop Image/Video Here
             <br><small class="opacity-70 text-xs">${videoLimits[item.name]}</small>`;
         }
-        // 🟢 نمایش تب video2video فقط برای Luma و Runway
+        // 🟢 مدیریت تب‌ها
         const v2vTab = document.querySelector('.vid-tab[data-mode="video2video"]');
-        if (v2vTab) {
-          v2vTab.style.display = (item.name === 'Luma' || item.name === 'Runway') ? 'inline-flex' : 'none';
+        const t2vTab = document.querySelector('.vid-tab[data-mode="text2video"]');
+        const i2vTab = document.querySelector('.vid-tab[data-mode="img2video"]');
+
+        if (item.name === 'Luma') {
+          // فقط Video-to-Video
+          if (v2vTab) v2vTab.style.display = 'inline-flex';
+          if (t2vTab) t2vTab.style.display = 'none';
+          if (i2vTab) i2vTab.style.display = 'none';
+        } else if (item.name === 'Runway') {
+          // Runway همهٔ تب‌ها رو داره
+          if (v2vTab) v2vTab.style.display = 'inline-flex';
+          if (t2vTab) t2vTab.style.display = 'inline-flex';
+          if (i2vTab) i2vTab.style.display = 'inline-flex';
+        } else {
+          // سایر مدل‌ها بدون video2video
+          if (v2vTab) v2vTab.style.display = 'none';
+          if (t2vTab) t2vTab.style.display = 'inline-flex';
+          if (i2vTab) i2vTab.style.display = 'inline-flex';
         }
       }
     });
