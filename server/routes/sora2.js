@@ -8,7 +8,7 @@ const router = express.Router();
 
 /* 🔑 API Key و URLها — با قابلیت چرخش */
 let apiKeys = [
-  { key: '3436c0b31f36277a3dffefab6e16cb1a', active: true },
+  { key: '223eaeae057df456a48746b0338448d8', active: true },
   { key: 'e497ee9a169a6bac8dd9bd6d9db0775e', active: true },
   { key: 'edac70ca980ae21d58d380a633c837b8', active: true },
   { key: 'edac70ca980ae21d58d380a633c837b8', active: true }
@@ -131,7 +131,6 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
     // ⛔ اگر هیچ کلیدی جواب نداد
     return res.status(500).json({
       error: '⛔ همه کلیدها خطا دادند.',
-      triedKeys
     });
 
   } catch (err) {
