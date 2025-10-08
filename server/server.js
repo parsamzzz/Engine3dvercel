@@ -19,7 +19,7 @@ import imageToVideoProxy from './routes/image-to-video-proxy.js';
 import textToVideoProxy from './routes/text-to-video-proxy.js';
 import sora2Route from './routes/sora2.js';
 import universalRoute from './routes/universal.js';
-import universalRoute from './routes/wan.js';
+import wanRoute from './routes/wan.js';
 
 
 
