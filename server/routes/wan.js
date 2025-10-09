@@ -7,7 +7,7 @@ import fetch from 'node-fetch';
 const router = express.Router();
 
 /* 🔑 کلید API ثابت */
-const API_KEY = '36eaf7c5cdbc6b7fcac9f2954bf841fa';
+const API_KEY = '3761794009ab2c5268a8b31fece973df';
 
 /* 🔗 URLهای سرویس WAN (KIE.AI) */
 const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
