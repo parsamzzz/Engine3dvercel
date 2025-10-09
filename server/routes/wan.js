@@ -7,7 +7,7 @@ import fetch from 'node-fetch';
 const router = express.Router();
 
 /* 🔑 کلید API ثابت */
-const API_KEY = '223eaeae057df456a48746b0338448d8';
+const API_KEY = '36eaf7c5cdbc6b7fcac9f2954bf841fa';
 
 /* 🔗 URLهای سرویس WAN (KIE.AI) */
 const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
@@ -111,7 +111,6 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
     res.status(200).json({
       taskId: taskResp.data.data.taskId,
       msg: '✅ Task با موفقیت ایجاد شد.',
-      uploadImage: image_url || null,
       rawResponse: taskResp.data
     });
   } catch (err) {

@@ -112,7 +112,6 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
           return res.status(200).json({
             taskId: response.data.data.taskId,
             msg: '✅ Task با موفقیت ایجاد شد.',
-            uploadImage: image_url || null,
             usedKey: k.key
           });
         } else {
