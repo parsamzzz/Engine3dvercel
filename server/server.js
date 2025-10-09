@@ -21,6 +21,8 @@ import sora2Route from './routes/sora2.js';
 import universalRoute from './routes/universal.js';
 import wanRoute from './routes/wan.js';
 import lumaRoute from './routes/luma.js';
+import runwayRoute from './routes/runway.js';
+
 
 
 
@@ -67,6 +69,8 @@ app.use('/api/sora2', sora2Route);
 app.use('/api/universal', universalRoute);
 app.use('/api/wan', wanRoute);
 app.use('/api/luma', lumaRoute);
+app.use('/api/runway', runwayRoute);
+
 
 
 
