@@ -20,7 +20,7 @@ import textToVideoProxy from './routes/text-to-video-proxy.js';
 import sora2Route from './routes/sora2.js';
 import universalRoute from './routes/universal.js';
 import wanRoute from './routes/wan.js';
-import wanRoute from './routes/luma.js';
+import lumaRoute from './routes/luma.js';
 
 
 
