@@ -7,7 +7,7 @@ import { Blob } from 'node:buffer';
 const router = express.Router();
 
 /* 🔑 API Key و URL سرویس‌ها */
-const API_KEY = '67f831bce5b5330d9f6d72b72e5017d3';
+const API_KEY = 'ca6811163e441a6291c30575531cff59';
 const FILE_UPLOAD_URL     = 'https://kieai.redpandaai.co/api/file-stream-upload';
 const ALEPH_GENERATE_URL  = 'https://api.kie.ai/api/v1/aleph/generate';
 const ALEPH_STATUS_URL    = 'https://api.kie.ai/api/v1/aleph/record-info';
