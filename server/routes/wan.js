@@ -6,23 +6,18 @@ import fetch from 'node-fetch';
 
 const router = express.Router();
 
-/* 🔑 کلید API ثابت */
 const API_KEY = 'ca6811163e441a6291c30575531cff59';
 
-/* 🔗 URLهای سرویس WAN (KIE.AI) */
 const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
 const CREATE_TASK_URL = 'https://api.kie.ai/api/v1/jobs/createTask';
 const RECORD_INFO_URL = 'https://api.kie.ai/api/v1/jobs/recordInfo';
 
-/* 📦 ذخیره فایل در حافظه */
 const upload = multer({ storage: multer.memoryStorage() });
 
-/* 🟢 مسیر تست سلامت سرور */
 router.get('/', (req, res) => {
   res.send('✅ WAN AI API route is working.');
 });
 
-/* 📤 ایجاد Task جدید (Text-to-Video یا Image-to-Video) */
 router.post('/createTask', upload.single('image'), async (req, res) => {
   try {
     const {
@@ -36,14 +31,12 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
       acceleration
     } = req.body;
 
-    // اعتبارسنجی ورودی‌های ضروری
     if (!model || (!prompt && !req.file)) {
       return res.status(400).json({ error: '❌ model و prompt یا image الزامی هستند.' });
     }
 
     let image_url = null;
 
-    // 🟡 آپلود تصویر اگر ارسال شده باشد
     if (req.file) {
       const allowed = ['image/jpeg', 'image/png', 'image/webp'];
       if (!allowed.includes(req.file.mimetype)) {
@@ -80,7 +73,6 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
       image_url = uploadData.data.downloadUrl;
     }
 
-    // 🧩 آماده‌سازی ورودی برای ایجاد Task
     const input = {};
 
     if (prompt) input.prompt = prompt;
@@ -98,7 +90,6 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
 
     console.log('🚀 [WAN] ارسال درخواست createTask:', { model, hasImage: !!image_url });
 
-    // 🚀 ارسال درخواست ایجاد Task
     const taskResp = await axios.post(CREATE_TASK_URL, body, {
       headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' }
     });
@@ -119,7 +110,6 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
   }
 });
 
-/* 📊 بررسی وضعیت Task */
 router.get('/recordInfo/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;

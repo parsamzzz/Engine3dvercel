@@ -6,7 +6,6 @@ import { Blob } from 'node:buffer';
 
 const router = express.Router();
 
-/* 🔑 API Key و URL سرویس‌ها */
 const API_KEY = 'ca6811163e441a6291c30575531cff59';
 const FILE_UPLOAD_URL     = 'https://kieai.redpandaai.co/api/file-stream-upload';
 const ALEPH_GENERATE_URL  = 'https://api.kie.ai/api/v1/aleph/generate';
@@ -14,15 +13,12 @@ const ALEPH_STATUS_URL    = 'https://api.kie.ai/api/v1/aleph/record-info';
 const RUNWAY_GENERATE_URL = 'https://api.kie.ai/api/v1/runway/generate';
 const RUNWAY_STATUS_URL   = 'https://api.kie.ai/api/v1/runway/record-detail';
 
-/* 📦 دریافت فایل در حافظه */
 const upload = multer({ storage: multer.memoryStorage() });
 
-/* 🟢 تست سلامت */
 router.get('/', (req, res) => {
   res.send('✅ Video Modify API (ALEPH & RUNWAY) route is active.');
 });
 
-/* 📤 ایجاد تسک (Generate) */
 router.post('/process', upload.single('video'), async (req, res) => {
   const {
     prompt,
@@ -48,7 +44,6 @@ router.post('/process', upload.single('video'), async (req, res) => {
   }
 
   try {
-    /* 🟡 مرحله ۱: بررسی فرمت و حجم فایل */
     const allowedExt = ['.mp4', '.mov', '.avi'];
     const ext = '.' + (req.file.originalname.split('.').pop() || '').toLowerCase();
 
@@ -58,7 +53,6 @@ router.post('/process', upload.single('video'), async (req, res) => {
     if (req.file.size > 500 * 1024 * 1024)
       return res.status(400).json({ error: '❌ حجم ویدیو نباید بیش از 500MB باشد.' });
 
-    /* 🟠 مرحله ۲: آپلود فایل به KIE File Stream */
     const formData = new FormData();
     formData.append('file', new Blob([req.file.buffer]), req.file.originalname);
     formData.append('uploadPath', 'videos/user-uploads');
