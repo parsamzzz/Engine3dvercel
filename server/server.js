@@ -23,6 +23,8 @@ import wanRoute from './routes/wan.js';
 import lumaRoute from './routes/luma.js';
 import runwayRoute from './routes/runway.js';
 import klingRoute from './routes/kling.js';
+import seedanceRoute from './routes/seedance.js';
+
 
 
 
@@ -73,6 +75,8 @@ app.use('/api/wan', wanRoute);
 app.use('/api/luma', lumaRoute);
 app.use('/api/runway', runwayRoute);
 app.use('/api/kling', klingRoute);
+app.use('/api/seedance', seedanceRoute);
+
 
 
 
