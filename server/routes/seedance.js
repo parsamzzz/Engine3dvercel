@@ -6,7 +6,7 @@ import fetch from 'node-fetch';
 
 const router = express.Router();
 
-const API_KEY = process.env.KIE_API_KEY || '947f6df5a06cd573a238078e84e3b46f';
+const API_KEY = process.env.KIE_API_KEY || '6c9367fb92fb351df6f5f8c11f60a26b';
 
 // 📡 URLهای اصلی
 const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
