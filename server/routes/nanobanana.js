@@ -7,7 +7,7 @@ const router = express.Router();
 
 // 🟢 لیست کلیدها برای چرخش
 const API_KEYS = [
-  'e1b4c17651c189a81a8c2c5e87d9b0e0',
+  '0f0421314cdb133c96145192f5cffd87',
   '6c9367fb92fb351df6f5f8c11f60a26b',
  
 
