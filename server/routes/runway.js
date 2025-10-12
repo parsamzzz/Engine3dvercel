@@ -6,7 +6,7 @@ import FormData from "form-data";
 const router = express.Router();
 
 /* 🔑 API Config */
-const API_KEY = "6c9367fb92fb351df6f5f8c11f60a26b";
+const API_KEY = "dbd18fd3191266b86bbf18adb81d67d4";
 const FILE_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-stream-upload";
 
 const ALEPH_GENERATE_URL = "https://api.kie.ai/api/v1/aleph/generate";

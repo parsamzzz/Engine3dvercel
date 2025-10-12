@@ -7,7 +7,7 @@ import fetch from 'node-fetch';
 const router = express.Router();
 
 /* 🔑 API Key و URL سرویس‌ها */
-const API_KEY = process.env.KIE_API_KEY || '3bde9bb7f13f99eb4bd62496476338bc';
+const API_KEY = process.env.KIE_API_KEY || 'dbd18fd3191266b86bbf18adb81d67d4';
 const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
 const LUMA_MODIFY_GENERATE_URL = 'https://api.kie.ai/api/v1/modify/generate';
 const LUMA_MODIFY_STATUS_URL = 'https://api.kie.ai/api/v1/modify/record-info';
