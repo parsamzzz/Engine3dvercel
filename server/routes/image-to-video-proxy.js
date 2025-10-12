@@ -8,7 +8,7 @@ const router = express.Router()
 router.use(cors())
 router.options('*', cors())
 
-const API_KEY = process.env.AIVIDEO_API_KEY || 'edac70ca980ae21d58d380a633c837b8'
+const API_KEY = process.env.AIVIDEO_API_KEY || 'd5f15fc77b4e28c266fde6360ae15d4f'
 
 let videoCounter = 0 // شمارنده لاگ ویدیوها
 
