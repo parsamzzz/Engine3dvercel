@@ -4,7 +4,7 @@ import axios from 'axios'
 
 const router = express.Router()
 
-const API_KEY = process.env.AIVIDEO_API_KEY || 'ef19f58f74c43ddc6d7cbaebfd0b1e5f'
+const API_KEY = process.env.AIVIDEO_API_KEY || '947f6df5a06cd573a238078e84e3b46f'
 
 router.use(cors())
 router.options('*', cors())

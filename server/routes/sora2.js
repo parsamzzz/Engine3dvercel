@@ -8,7 +8,7 @@ const router = express.Router();
 
 /* 🔑 API Key و URLها — با قابلیت چرخش */
 let apiKeys = [
-  { key: '0f0421314cdb133c96145192f5cffd87', active: true },
+  { key: 'dbd18fd3191266b86bbf18adb81d67d4', active: true },
   { key: 'e497ee9a169a6bac8dd9bd6d9db0775e', active: true },
   { key: 'edac70ca980ae21d58d380a633c837b8', active: true },
   { key: 'edac70ca980ae21d58d380a633c837b8', active: true }
