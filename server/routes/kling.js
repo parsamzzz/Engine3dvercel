@@ -87,6 +87,7 @@ router.post(
       // 🔸 ساخت ورودی بر اساس مدل
       const input = {};
       switch (model) {
+        // 🔹 مدل‌های قدیمی
         case 'kling/v2-1-master-image-to-video':
         case 'kling/v2-1-standard':
           if (!prompt || !image_url)
@@ -110,13 +111,32 @@ router.post(
           if (tail_image_url) input.tail_image_url = tail_image_url;
           break;
 
+        // 🔹 مدل‌های جدید Kling 2.5
+        case 'kling/v2-5-turbo-image-to-video-pro':
+          if (!prompt || !image_url)
+            return res.status(400).json({ error: '❌ prompt و image_url الزامی است.' });
+          input.prompt = prompt;
+          input.image_url = image_url;
+          if (duration) input.duration = duration.toString();
+          if (negative_prompt) input.negative_prompt = negative_prompt;
+          if (cfg_scale) input.cfg_scale = parseFloat(cfg_scale);
+          break;
+
+        case 'kling/v2-5-turbo-text-to-video-pro':
+          if (!prompt)
+            return res.status(400).json({ error: '❌ prompt الزامی است.' });
+          input.prompt = prompt;
+          if (duration) input.duration = duration.toString();
+          if (aspect_ratio) input.aspect_ratio = aspect_ratio;
+          if (negative_prompt) input.negative_prompt = negative_prompt;
+          if (cfg_scale) input.cfg_scale = parseFloat(cfg_scale);
+          break;
+
         default:
           return res.status(400).json({ error: '❌ مدل نامعتبر است.' });
       }
 
-      // 🔹 پارامترهای اختیاری
-      if (duration) input.duration = duration.toString();
-      if (negative_prompt) input.negative_prompt = negative_prompt;
+      // 🔹 اعتبارسنجی cfg_scale
       if (cfg_scale) {
         const scale = parseFloat(cfg_scale);
         if (scale < 0 || scale > 1)
