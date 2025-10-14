@@ -16,7 +16,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // 🔹 تابع آپلود فایل به KIE.AI
 const uploadFile = async (file) => {
-  if (!file) return '';
+  if (!file) return null;
 
   const allowed = ['image/jpeg', 'image/png', 'image/webp'];
   if (!allowed.includes(file.mimetype)) {
@@ -73,11 +73,8 @@ router.post(
       const imageFile = req.files?.['image']?.[0];
       const tailFile = req.files?.['tail_image']?.[0];
 
-      let image_url = null;
-      let tail_image_url = null;
-
-      if (imageFile) image_url = await uploadFile(imageFile);
-      if (tailFile) tail_image_url = await uploadFile(tailFile);
+      let image_url = imageFile ? await uploadFile(imageFile) : null;
+      let tail_image_url = tailFile ? await uploadFile(tailFile) : null;
 
       if (prompt && prompt.length > 5000)
         return res.status(400).json({ error: '❌ طول prompt نباید بیش از 5000 کاراکتر باشد.' });
@@ -86,8 +83,9 @@ router.post(
 
       // 🔸 ساخت ورودی بر اساس مدل
       const input = {};
+
       switch (model) {
-        // 🔹 مدل‌های قدیمی
+        // مدل‌های قدیمی 2.1
         case 'kling/v2-1-master-image-to-video':
         case 'kling/v2-1-standard':
           if (!prompt || !image_url)
@@ -111,33 +109,30 @@ router.post(
           if (tail_image_url) input.tail_image_url = tail_image_url;
           break;
 
-        // 🔹 مدل‌های جدید Kling 2.5
+        // مدل‌های جدید 2.5
         case 'kling/v2-5-turbo-image-to-video-pro':
           if (!prompt || !image_url)
             return res.status(400).json({ error: '❌ prompt و image_url الزامی است.' });
           input.prompt = prompt;
           input.image_url = image_url;
-          if (duration) input.duration = duration.toString();
-          if (negative_prompt) input.negative_prompt = negative_prompt;
-          if (cfg_scale) input.cfg_scale = parseFloat(cfg_scale);
           break;
 
         case 'kling/v2-5-turbo-text-to-video-pro':
           if (!prompt)
             return res.status(400).json({ error: '❌ prompt الزامی است.' });
           input.prompt = prompt;
-          if (duration) input.duration = duration.toString();
-          if (aspect_ratio) input.aspect_ratio = aspect_ratio;
-          if (negative_prompt) input.negative_prompt = negative_prompt;
-          if (cfg_scale) input.cfg_scale = parseFloat(cfg_scale);
           break;
 
         default:
           return res.status(400).json({ error: '❌ مدل نامعتبر است.' });
       }
 
-      // 🔹 اعتبارسنجی cfg_scale
-      if (cfg_scale) {
+      // 🔹 اضافه کردن پارامترهای اختیاری به صورت یکنواخت
+      if (duration) input.duration = duration.toString();
+      if (aspect_ratio) input.aspect_ratio = aspect_ratio;
+      if (negative_prompt) input.negative_prompt = negative_prompt;
+      if (tail_image_url) input.tail_image_url = tail_image_url;
+      if (cfg_scale !== undefined) {
         const scale = parseFloat(cfg_scale);
         if (scale < 0 || scale > 1)
           return res.status(400).json({ error: '❌ cfg_scale باید بین 0 و 1 باشد.' });
