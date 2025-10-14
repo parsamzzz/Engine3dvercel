@@ -5,7 +5,7 @@ import FormData from 'form-data';
 import fetch from 'node-fetch';
 
 const router = express.Router();
-const API_KEY = process.env.KIE_API_KEY || 'dbd18fd3191266b86bbf18adb81d67d4';
+const API_KEY = process.env.KIE_API_KEY || '157faf43cdc7ad2863074e2bb9f5e6c1';
 
 const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
 const CREATE_TASK_URL = 'https://api.kie.ai/api/v1/jobs/createTask';
