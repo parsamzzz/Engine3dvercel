@@ -5,7 +5,7 @@ import FormData from 'form-data';
 
 const router = express.Router();
 
-const API_KEY = process.env.KIE_API_KEY || 'YOUR_API_KEY_HERE';
+const API_KEY = process.env.KIE_API_KEY || 'dbd18fd3191266b86bbf18adb81d67d4';
 const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload'; // بررسی شود
 const GENERATE_URL = 'https://api.kie.ai/api/v1/veo/generate';
 const RECORD_INFO_URL = 'https://api.kie.ai/api/v1/veo/record-info';
