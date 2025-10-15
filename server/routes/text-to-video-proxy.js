@@ -9,7 +9,7 @@ router.use(cors());
 router.options('*', cors());
 
 // کلید API (بهتر است از env گرفته شود)
-const API_KEY = process.env.AIVIDEO_API_KEY || 'cb994f543c4979c1a8ee8a9a14f8ea1f';
+const API_KEY = process.env.AIVIDEO_API_KEY || '6b78d943d326d9c024376276079b59af';
 
 let videoCounter = 0; // شمارنده ویدیوها برای لاگ
 
