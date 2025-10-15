@@ -11,14 +11,6 @@ const upload = multer();
 // =====================
 const API_KEYS = [
   "AIzaSyBRLO9BrEuF5Psn9HzVIgM5t7r4BhfytW0",
-  "AIzaSyAtegVVBwMLCH1lgpYaXpV4xevbhZFpy94",
-  "AIzaSyC1YjFwfMWgRkhG9n3R5ZKoYssPslVjCHI",
-  "AIzaSyDYNLJ9rCPZkunXVlMX-Id2cN89dTWPvhM",
-  "AIzaSyB1Knssvf8xyImnoqyX2TSj0oVft9lqriU",
-  "AIzaSyDsJ_zyRwzjvhn1hDbTnTHk3yPqDOHGVjY",
-  "AIzaSyA2c5kKBlEla9AjDRXYkoakzR0QCvAhZnQ",
-  "AIzaSyDsuifBsjH9_D74w1yxVwi_jYqVtL7RClU",
-  "AIzaSyCVDR3-fPGJ0FlzbrcuXFGH9IIWBpwZndE",
   "AIzaSyCvPUJ7zLFWJIzVw9UD3voAY9FJXTXAcD4",
   "AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0",
   "AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc",
