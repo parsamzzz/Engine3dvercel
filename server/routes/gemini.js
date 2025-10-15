@@ -154,20 +154,33 @@ async function handleRequest(req, res, next) {
         console.warn('⚠️ تصویری در پاسخ Gemini پیدا نشد.');
         return res.status(200).json({ message: 'درخواست پردازش شد، اما تصویری تولید نشد.', parts });
       }
-    } catch (err) {
-      keyState[idx].inUse = false;
-      console.error(`❌ خطا در کلید ${key.substring(0, 15)}...:`, err.message);
-      if (err.response?.data?.error?.message) {
-        console.error('جزئیات خطای API:', err.response.data.error.message);
-      }
-      if (err.message.includes('429')) {
-        keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; // 1 ساعت
-        console.warn(`⏳ کلید ${key.substring(0, 10)}... در حالت cooldown قرار گرفت.`);
-        triedKeys++;
-        continue;
-      }
-      return next(err);
-    }
+} catch (err) {
+  keyState[idx].inUse = false;
+  console.error(`❌ خطا در کلید ${key.substring(0, 15)}...:`, err.message);
+
+  if (err.response?.data?.error?.message) {
+    console.error('جزئیات خطای API:', err.response.data.error.message);
+  }
+
+  const status = err.response?.status || 0;
+
+  if (status === 429 || err.message.includes('429')) {
+    keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; 
+    console.warn(`⏳ کلید ${key.substring(0, 10)}... در حالت cooldown قرار گرفت (429).`);
+    triedKeys++;
+    continue;
+  }
+
+  if (status === 403 || err.message.includes('403')) {
+    keyState[idx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
+    console.warn(`🚫 کلید ${key.substring(0, 10)}... غیرفعال شد (403). کلید بعدی امتحان می‌شود.`);
+    triedKeys++;
+    continue;
+  }
+
+  return next(err);
+}
+
   }
 
   console.error('❌ هیچ‌کدام از کلیدها موفق نشد.');
