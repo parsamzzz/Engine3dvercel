@@ -19,10 +19,12 @@ const RUNWAY_STATUS_URL = "https://api.kie.ai/api/v1/runway/record-detail";
 /* ⚙️ Multer setup */
 const upload = multer({ storage: multer.memoryStorage() });
 
+/* 🔹 Status check endpoint */
 router.get("/", (req, res) => {
   res.send("✅ KIE.AI Video API (ALEPH + RUNWAY + EXTEND) is active.");
 });
 
+/* 🔹 Process endpoint */
 router.post("/process", upload.single("video"), async (req, res) => {
   const {
     prompt,
@@ -33,15 +35,16 @@ router.post("/process", upload.single("video"), async (req, res) => {
     duration,
     quality,
     seed,
-    parentTaskId, // فقط برای extend استفاده می‌شود
-    imageUrl, // برای Runway
-    referenceImage, // برای Aleph
+    imageUrl,
+    referenceImage,
+    taskId, // برای Runway Extend
   } = req.body;
 
-  if (!prompt || !service)
+  if (!prompt || !service) {
     return res.status(400).json({
       error: "❌ فیلدهای prompt و service الزامی هستند.",
     });
+  }
 
   try {
     /* 🟢 مرحله ۱: آپلود فایل در صورت وجود */
@@ -51,15 +54,17 @@ router.post("/process", upload.single("video"), async (req, res) => {
       const allowedExt = [".mp4", ".mov", ".avi"];
       const ext = "." + (req.file.originalname.split(".").pop() || "").toLowerCase();
 
-      if (!allowedExt.includes(ext))
+      if (!allowedExt.includes(ext)) {
         return res.status(400).json({
           error: "❌ فرمت ویدیو باید MP4 / MOV / AVI باشد.",
         });
+      }
 
-      if (req.file.size > 500 * 1024 * 1024)
+      if (req.file.size > 500 * 1024 * 1024) {
         return res.status(400).json({
           error: "❌ حجم ویدیو نباید بیش از 500MB باشد.",
         });
+      }
 
       const formData = new FormData();
       formData.append("file", req.file.buffer, req.file.originalname);
@@ -73,11 +78,12 @@ router.post("/process", upload.single("video"), async (req, res) => {
       });
 
       const uploadData = uploadResp.data;
-      if (!uploadData.success || !uploadData.data?.downloadUrl)
+      if (!uploadData.success || !uploadData.data?.downloadUrl) {
         return res.status(500).json({
           error: "❌ آپلود فایل به KIE.AI ناموفق بود.",
           rawResponse: uploadData,
         });
+      }
 
       videoUrl = uploadData.data.downloadUrl;
     }
@@ -88,8 +94,7 @@ router.post("/process", upload.single("video"), async (req, res) => {
 
     if (serviceType === "aleph") genUrl = ALEPH_GENERATE_URL;
     else if (serviceType === "runway") genUrl = RUNWAY_GENERATE_URL;
-    else if (serviceType === "runway_extend" || serviceType === "extend")
-      genUrl = RUNWAY_EXTEND_URL;
+    else if (serviceType === "runway_extend" || serviceType === "extend") genUrl = RUNWAY_EXTEND_URL;
     else
       return res.status(400).json({
         error: "❌ مقدار service باید یکی از مقادیر aleph / runway / runway_extend باشد.",
@@ -98,33 +103,42 @@ router.post("/process", upload.single("video"), async (req, res) => {
     /* 🟣 مرحله ۳: آماده‌سازی بدنه درخواست */
     const body = { prompt };
 
-    // تعیین ویدیو یا تصویر مرجع
     if (serviceType === "aleph") {
       if (videoUrl) body.videoUrl = videoUrl;
       if (referenceImage) body.referenceImage = referenceImage;
+      if (callBackUrl) body.callBackUrl = callBackUrl;
+      if (waterMark) body.waterMark = waterMark;
+      if (aspectRatio) body.aspectRatio = aspectRatio;
+      if (seed) body.seed = seed;
     } else if (serviceType === "runway") {
       if (videoUrl) body.videoUrl = videoUrl;
       if (imageUrl) body.imageUrl = imageUrl;
-      if (!videoUrl && !imageUrl && !aspectRatio)
+
+      if (!videoUrl && !imageUrl && !aspectRatio) {
         return res.status(400).json({
           error:
             "❌ در حالت Text-to-Video (Runway بدون ویدیو و تصویر)، پارامتر aspectRatio الزامی است.",
         });
-    } else if (serviceType === "runway_extend") {
-      if (!parentTaskId)
-        return res.status(400).json({
-          error: "❌ پارامتر parentTaskId برای extend الزامی است.",
-        });
-      body.parentTaskId = parentTaskId;
-    }
+      }
 
-    // پارامترهای اختیاری مشترک
-    if (callBackUrl) body.callBackUrl = callBackUrl;
-    if (waterMark) body.waterMark = waterMark;
-    if (aspectRatio) body.aspectRatio = aspectRatio;
-    if (duration) body.duration = duration;
-    if (quality) body.quality = quality;
-    if (seed) body.seed = seed;
+      if (callBackUrl) body.callBackUrl = callBackUrl;
+      if (waterMark) body.waterMark = waterMark;
+      if (aspectRatio) body.aspectRatio = aspectRatio;
+      if (duration) body.duration = duration;
+      if (quality) body.quality = quality;
+    } else if (serviceType === "runway_extend") {
+      if (!taskId) {
+        return res.status(400).json({
+          error: "❌ پارامتر taskId برای Runway Extend الزامی است.",
+        });
+      }
+      body.taskId = taskId;
+
+      if (callBackUrl) body.callBackUrl = callBackUrl;
+      if (waterMark) body.waterMark = waterMark;
+      if (duration) body.duration = duration;
+      if (quality) body.quality = quality;
+    }
 
     /* 🟢 مرحله ۴: ارسال درخواست تولید */
     const genResp = await axios.post(genUrl, body, {
@@ -134,9 +148,9 @@ router.post("/process", upload.single("video"), async (req, res) => {
       },
     });
 
-    const taskId = genResp.data?.data?.taskId;
+    const returnedTaskId = genResp.data?.data?.taskId;
 
-    if (!taskId) {
+    if (!returnedTaskId) {
       return res.status(500).json({
         success: false,
         upload: { downloadUrl: videoUrl },
@@ -149,7 +163,7 @@ router.post("/process", upload.single("video"), async (req, res) => {
     res.status(200).json({
       success: true,
       upload: { downloadUrl: videoUrl },
-      task: { taskId },
+      task: { taskId: returnedTaskId },
       msg: `✅ تسک ${service.toUpperCase()} با موفقیت ایجاد شد.`,
       rawResponse: genResp.data,
     });
@@ -171,8 +185,7 @@ router.get("/status/:service/:taskId", async (req, res) => {
   let statusUrl;
   const serviceType = service.toLowerCase();
 
-  if (serviceType === "aleph")
-    statusUrl = `${ALEPH_STATUS_URL}?taskId=${taskId}`;
+  if (serviceType === "aleph") statusUrl = `${ALEPH_STATUS_URL}?taskId=${taskId}`;
   else if (serviceType === "runway" || serviceType === "runway_extend")
     statusUrl = `${RUNWAY_STATUS_URL}?taskId=${taskId}`;
   else
