@@ -24,6 +24,8 @@ import lumaRoute from './routes/luma.js';
 import runwayRoute from './routes/runway.js';
 import klingRoute from './routes/kling.js';
 import seedanceRoute from './routes/seedance.js';
+import veoRoute from './routes/veo.js';
+
 
 
 
@@ -76,6 +78,8 @@ app.use('/api/luma', lumaRoute);
 app.use('/api/runway', runwayRoute);
 app.use('/api/kling', klingRoute);
 app.use('/api/seedance', seedanceRoute);
+app.use('/api/veo3', veoRoute);
+
 
 
 

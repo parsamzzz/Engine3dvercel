@@ -1,166 +1,128 @@
-import express from 'express';
-import multer from 'multer';
-import axios from 'axios';
-import FormData from 'form-data';
+import express from "express";
+import multer from "multer";
+import { GoogleGenAI } from "@google/genai";
 
-const router = express.Router();
+const app = express();
+const port = 3000;
 
-const API_KEY = process.env.KIE_API_KEY || 'dbd18fd3191266b86bbf18adb81d67d4';
-const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload'; // بررسی شود
-const GENERATE_URL = 'https://api.kie.ai/api/v1/veo/generate';
-const RECORD_INFO_URL = 'https://api.kie.ai/api/v1/veo/record-info';
-const GET_1080P_URL = 'https://api.kie.ai/api/v1/veo/get-1080p-video';
+// Multer در حالت حافظه
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
-/* 📦 دریافت فایل در حافظه */
-const upload = multer({ storage: multer.memoryStorage() });
+// نمونه‌سازی کلاینت Gemini
+const ai = new GoogleGenAI({});
 
-/* 🟢 تست سلامت API */
-router.get('/', (req, res) => {
-  res.send('✅ Veo3 API route is working.');
-});
+// مدل‌ها و قابلیت‌ها
+const videoModels = {
+  "veo-2.0": { resolutions: ["720p"], durations: [5, 6, 8], audio: false, supportsReference: false, supportsInterpolation: false, supportsExtension: false },
+  "veo-3.0": { resolutions: ["720p", "1080p"], durations: [4, 6, 8], audio: true, supportsReference: false, supportsInterpolation: false, supportsExtension: false },
+  "veo-3.0-fast": { resolutions: ["720p", "1080p"], durations: [4, 6, 8], audio: true, supportsReference: false, supportsInterpolation: false, supportsExtension: false },
+  "veo-3.1": { resolutions: ["720p", "1080p"], durations: [4, 6, 8], audio: true, supportsReference: true, supportsInterpolation: true, supportsExtension: true },
+  "veo-3.1-fast": { resolutions: ["720p", "1080p"], durations: [4, 6, 8], audio: true, supportsReference: true, supportsInterpolation: true, supportsExtension: true },
+};
 
-/* 📤 ایجاد Task تولید ویدیو */
-router.post('/generate', upload.single('image'), async (req, res) => {
+app.use(express.json());
+
+// تعریف فیلدهای آپلود
+const cpUpload = upload.fields([
+  { name: "image", maxCount: 3 },
+  { name: "video", maxCount: 1 }
+]);
+
+// Endpoint تولید ویدیو
+app.post("/generate-video", cpUpload, async (req, res) => {
   try {
     const {
+      model,
       prompt,
-      model = 'veo3',                    // 'veo3' یا 'veo3_fast'
-      aspectRatio = '16:9',              // '16:9', '9:16', یا 'Auto'
-      seeds,
-      watermark,
-      callBackUrl,
-      enableFallback = false,
-      enableTranslation = true
+      resolution,
+      duration,
+      aspectRatio,
+      negativePrompt,
+      useReferenceImages,
+      useInterpolation,
+      useExtension
     } = req.body;
 
-    // ✅ حداقل یکی از prompt یا تصویر باید وجود داشته باشد
-    if (!prompt && !req.file) {
-      return res.status(400).json({ error: '❌ فیلد prompt یا تصویر الزامی است.' });
+    if (!videoModels[model]) return res.status(400).json({ error: "مدل انتخابی معتبر نیست." });
+    const modelConfig = videoModels[model];
+
+    // آماده‌سازی تصویر اولیه
+    let image;
+    if (req.files["image"]?.length) {
+      image = { imageBytes: req.files["image"][0].buffer, mimeType: req.files["image"][0].mimetype };
     }
 
-    /* 🟡 آپلود تصویر در صورت وجود (image-to-video) */
-    let imageUrls;
-    if (req.file) {
-      const formData = new FormData();
-      formData.append('file', req.file.buffer, req.file.originalname);
-      formData.append('uploadPath', 'images/user-uploads');
-
-      const uploadResp = await axios.post(FILE_UPLOAD_URL, formData, {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          ...formData.getHeaders()
-        }
-      });
-
-      const uploadData = uploadResp.data;
-      if (!uploadData.success || !uploadData.data?.downloadUrl) {
-        return res.status(500).json({
-          error: '❌ آپلود تصویر شکست خورد.',
-          rawResponse: uploadData
-        });
-      }
-      imageUrls = [uploadData.data.downloadUrl];
+    // Reference Images
+    let referenceImages = [];
+    if (useReferenceImages === "true" && modelConfig.supportsReference && req.files["image"]?.length) {
+      referenceImages = req.files["image"].slice(0, 3).map(file => ({
+        image: { imageBytes: file.buffer, mimeType: file.mimetype },
+        reference_type: "asset",
+      }));
     }
 
-    /* 🔵 بررسی seeds */
-    let seedValue;
-    if (seeds) {
-      const parsedSeed = parseInt(seeds);
-      if (parsedSeed < 10000 || parsedSeed > 99999) {
-        return res.status(400).json({ error: '❌ seeds باید بین 10000 تا 99999 باشد.' });
-      }
-      seedValue = parsedSeed;
+    // Interpolation (First & Last Frame)
+    let lastFrame;
+    if (useInterpolation === "true" && modelConfig.supportsInterpolation && req.files["image"]?.length === 2) {
+      lastFrame = { imageBytes: req.files["image"][1].buffer, mimeType: req.files["image"][1].mimetype };
+      image = { imageBytes: req.files["image"][0].buffer, mimeType: req.files["image"][0].mimetype };
     }
 
-    /* 🟢 آماده سازی body درخواست Veo3 */
-    const body = {
-      prompt,
-      model,
-      aspectRatio,
-      enableFallback: enableFallback === 'true' || enableFallback === true,
-      enableTranslation: enableTranslation === 'true' || enableTranslation === true
+    // Video Extension
+    let inputVideo;
+    if (useExtension === "true" && modelConfig.supportsExtension && req.files["video"]?.length) {
+      inputVideo = req.files["video"][0].buffer;
+    }
+
+    // تنظیمات مدل
+    let config = {
+      resolution: resolution || modelConfig.resolutions[0],
+      durationSeconds: duration ? Number(duration) : modelConfig.durations[0],
+      aspectRatio: aspectRatio || "16:9",
+      negativePrompt: negativePrompt || undefined,
+      reference_images: referenceImages.length ? referenceImages : undefined,
+      ...(lastFrame ? { lastFrame } : {}),
     };
 
-    if (imageUrls) body.imageUrls = imageUrls;
-    if (seedValue) body.seeds = seedValue;
-    if (watermark) body.watermark = watermark;
-    if (callBackUrl) body.callBackUrl = callBackUrl;
-
-    /* 🟣 ارسال درخواست تولید ویدیو */
-    const taskResp = await axios.post(GENERATE_URL, body, {
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        'Content-Type': 'application/json'
-      }
+    // فراخوانی API
+    let operation = await ai.models.generateVideos({
+      model,
+      prompt,
+      config,
+      ...(image ? { image } : {}),
+      ...(inputVideo ? { video: inputVideo } : {}),
     });
 
-    if (taskResp.data.code !== 200 || !taskResp.data.data?.taskId) {
-      return res.status(500).json({
-        error: '❌ Task ایجاد نشد.',
-        rawResponse: taskResp.data
-      });
+    // Poll با بهینه‌سازی (10 ثانیه) و timeout
+    const maxRetries = 60; // حداکثر 10 دقیقه انتظار
+    let retries = 0;
+    while (!operation.done) {
+      if (retries >= maxRetries) throw new Error("Video generation timeout");
+      await new Promise(r => setTimeout(r, 10000));
+      operation = await ai.operations.getVideosOperation({ operation });
+      retries++;
     }
 
-    res.status(200).json({
-      taskId: taskResp.data.data.taskId,
-      msg: '✅ Task Veo3 با موفقیت ایجاد شد.',
-      uploadImage: imageUrls ? imageUrls[0] : null
+    // بررسی وجود ویدیو
+    if (!operation.response?.generatedVideos?.length) {
+      return res.status(500).json({ error: "ویدیو تولید نشد یا بلاک شده است." });
+    }
+
+    // دانلود ویدیو
+    const videoBuffer = await ai.files.download({
+      file: operation.response.generatedVideos[0].video,
     });
 
-  } catch (err) {
-    console.error('❌ Error:', err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+    // ارسال مستقیم ویدیو
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Content-Disposition", `attachment; filename="generated_video.mp4"`);
+    res.send(videoBuffer);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message || "خطا در تولید ویدیو." });
   }
 });
 
-/* 📊 بررسی وضعیت Task */
-router.get('/recordInfo/:taskId', async (req, res) => {
-  try {
-    const { taskId } = req.params;
-    if (!taskId)
-      return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
-
-    const statusResp = await axios.get(`${RECORD_INFO_URL}?taskId=${taskId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
-
-    res.status(200).json(statusResp.data);
-  } catch (err) {
-    console.error('❌ Status error:', err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
-  }
-});
-
-/* 🎬 دریافت ویدیوی 1080P (فقط برای 16:9 و بدون fallback) */
-router.get('/get-1080p/:taskId', async (req, res) => {
-  try {
-    const { taskId } = req.params;
-    if (!taskId)
-      return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
-
-    // دریافت اطلاعات Task
-    const statusResp = await axios.get(`${RECORD_INFO_URL}?taskId=${taskId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
-
-    const record = statusResp.data.data;
-    if (record.fallbackFlag) {
-      return res.status(400).json({ error: '❌ ویدیو fallback قابل دریافت 1080P نیست.' });
-    }
-    if (record.aspectRatio !== '16:9') {
-      return res.status(400).json({ error: '❌ فقط ویدیوهای 16:9 از 1080P پشتیبانی می‌کنند.' });
-    }
-
-    // دریافت ویدیوی HD
-    const videoResp = await axios.get(`${GET_1080P_URL}?taskId=${taskId}&index=0`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
-
-    res.status(200).json(videoResp.data);
-  } catch (err) {
-    console.error('❌ 1080P error:', err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
-  }
-});
-
-export default router;
+app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
