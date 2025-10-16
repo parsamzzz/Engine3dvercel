@@ -1,9 +1,9 @@
+// routes/veo.js
 import express from "express";
 import multer from "multer";
 import { GoogleGenAI } from "@google/genai";
 
-const app = express();
-const port = 3000;
+const router = express.Router();
 
 // Multer در حالت حافظه
 const storage = multer.memoryStorage();
@@ -21,8 +21,6 @@ const videoModels = {
   "veo-3.1-fast": { resolutions: ["720p", "1080p"], durations: [4, 6, 8], audio: true, supportsReference: true, supportsInterpolation: true, supportsExtension: true },
 };
 
-app.use(express.json());
-
 // تعریف فیلدهای آپلود
 const cpUpload = upload.fields([
   { name: "image", maxCount: 3 },
@@ -30,7 +28,7 @@ const cpUpload = upload.fields([
 ]);
 
 // Endpoint تولید ویدیو
-app.post("/generate-video", cpUpload, async (req, res) => {
+router.post("/generate-video", cpUpload, async (req, res) => {
   try {
     const {
       model,
@@ -125,4 +123,4 @@ app.post("/generate-video", cpUpload, async (req, res) => {
   }
 });
 
-app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+export default router;

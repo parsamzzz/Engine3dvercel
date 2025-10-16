@@ -78,7 +78,7 @@ app.use('/api/luma', lumaRoute);
 app.use('/api/runway', runwayRoute);
 app.use('/api/kling', klingRoute);
 app.use('/api/seedance', seedanceRoute);
-app.use('/api/veo3', veoRoute);
+app.use('/api/veo', veoRoute);
 
 
 
