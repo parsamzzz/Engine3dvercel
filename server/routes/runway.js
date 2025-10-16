@@ -6,7 +6,7 @@ import FormData from "form-data";
 const router = express.Router();
 
 /* 🔑 API Config */
-const API_KEY = "dbd18fd3191266b86bbf18adb81d67d4";
+const API_KEY = process.env.KIE_API_KEY || "dbd18fd3191266b86bbf18adb81d67d4";
 const FILE_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-stream-upload";
 
 const ALEPH_GENERATE_URL = "https://api.kie.ai/api/v1/aleph/generate";
@@ -19,168 +19,159 @@ const RUNWAY_STATUS_URL = "https://api.kie.ai/api/v1/runway/record-detail";
 /* ⚙️ Multer setup */
 const upload = multer({ storage: multer.memoryStorage() });
 
+/* 🔹 Helper: Upload any file (video or image) */
+const uploadAnyFile = async (file, type = "video") => {
+  if (!file) return null;
+
+  const allowedExtensions = {
+    video: [".mp4", ".mov", ".avi"],
+    image: [".png", ".jpg", ".jpeg", ".webp"],
+  };
+
+  const ext = "." + (file.originalname.split(".").pop() || "").toLowerCase();
+  if (!allowedExtensions[type].includes(ext)) {
+    throw new Error(`❌ فرمت ${type} نامعتبر است.`);
+  }
+
+  const maxSize = type === "video" ? 500 * 1024 * 1024 : 20 * 1024 * 1024;
+  if (file.size > maxSize) {
+    throw new Error(`❌ حجم ${type} نباید بیش از ${type === "video" ? "500MB" : "20MB"} باشد.`);
+  }
+
+  const formData = new FormData();
+  formData.append("file", file.buffer, file.originalname);
+  formData.append("uploadPath", type === "video" ? "videos/user-uploads" : "images/user-uploads");
+
+  const resp = await axios.post(FILE_UPLOAD_URL, formData, {
+    headers: {
+      Authorization: `Bearer ${API_KEY}`,
+      ...formData.getHeaders(),
+    },
+  });
+
+  const data = resp.data;
+  if (!data.success || !data.data?.downloadUrl) {
+    throw new Error(`❌ آپلود ${type} به KIE.AI ناموفق بود.`);
+  }
+
+  return data.data.downloadUrl;
+};
+
 /* 🔹 Status check endpoint */
 router.get("/", (req, res) => {
   res.send("✅ KIE.AI Video API (ALEPH + RUNWAY + EXTEND) is active.");
 });
 
 /* 🔹 Process endpoint */
-router.post("/process", upload.single("video"), async (req, res) => {
-  const {
-    prompt,
-    service,
-    callBackUrl,
-    waterMark,
-    aspectRatio,
-    duration,
-    quality,
-    seed,
-    imageUrl,
-    referenceImage,
-    taskId, // برای Runway Extend
-  } = req.body;
+router.post(
+  "/process",
+  upload.fields([
+    { name: "video", maxCount: 1 },
+    { name: "imageUrl", maxCount: 1 },
+    { name: "referenceImage", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    const {
+      prompt,
+      service,
+      callBackUrl,
+      waterMark,
+      aspectRatio,
+      duration,
+      quality,
+      seed,
+      taskId,
+      uploadCn,
+    } = req.body;
 
-  if (!prompt || !service) {
-    return res.status(400).json({
-      error: "❌ فیلدهای prompt و service الزامی هستند.",
-    });
-  }
-
-  try {
-    /* 🟢 مرحله ۱: آپلود فایل در صورت وجود */
-    let videoUrl = null;
-
-    if (req.file) {
-      const allowedExt = [".mp4", ".mov", ".avi"];
-      const ext = "." + (req.file.originalname.split(".").pop() || "").toLowerCase();
-
-      if (!allowedExt.includes(ext)) {
-        return res.status(400).json({
-          error: "❌ فرمت ویدیو باید MP4 / MOV / AVI باشد.",
-        });
-      }
-
-      if (req.file.size > 500 * 1024 * 1024) {
-        return res.status(400).json({
-          error: "❌ حجم ویدیو نباید بیش از 500MB باشد.",
-        });
-      }
-
-      const formData = new FormData();
-      formData.append("file", req.file.buffer, req.file.originalname);
-      formData.append("uploadPath", "videos/user-uploads");
-
-      const uploadResp = await axios.post(FILE_UPLOAD_URL, formData, {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          ...formData.getHeaders(),
-        },
-      });
-
-      const uploadData = uploadResp.data;
-      if (!uploadData.success || !uploadData.data?.downloadUrl) {
-        return res.status(500).json({
-          error: "❌ آپلود فایل به KIE.AI ناموفق بود.",
-          rawResponse: uploadData,
-        });
-      }
-
-      videoUrl = uploadData.data.downloadUrl;
+    if (!prompt || !service) {
+      return res.status(400).json({ error: "❌ فیلدهای prompt و service الزامی هستند." });
     }
 
-    /* 🔵 مرحله ۲: انتخاب URL مناسب بر اساس نوع سرویس */
-    let genUrl;
-    const serviceType = service.toLowerCase();
+    try {
+      // 🟢 مرحله ۱: آپلود فایل‌ها
+      let videoUrl = req.files?.video?.[0] ? await uploadAnyFile(req.files.video[0], "video") : null;
+      let imageUrlUpload = req.files?.imageUrl?.[0] ? await uploadAnyFile(req.files.imageUrl[0], "image") : null;
+      let referenceImageUpload = req.files?.referenceImage?.[0] ? await uploadAnyFile(req.files.referenceImage[0], "image") : null;
 
-    if (serviceType === "aleph") genUrl = ALEPH_GENERATE_URL;
-    else if (serviceType === "runway") genUrl = RUNWAY_GENERATE_URL;
-    else if (serviceType === "runway_extend" || serviceType === "extend") genUrl = RUNWAY_EXTEND_URL;
-    else
-      return res.status(400).json({
-        error: "❌ مقدار service باید یکی از مقادیر aleph / runway / runway_extend باشد.",
+      // 🔵 مرحله ۲: انتخاب URL بر اساس سرویس
+      let genUrl;
+      const serviceType = service.toLowerCase();
+      if (serviceType === "aleph") genUrl = ALEPH_GENERATE_URL;
+      else if (serviceType === "runway") genUrl = RUNWAY_GENERATE_URL;
+      else if (serviceType === "runway_extend" || serviceType === "extend") genUrl = RUNWAY_EXTEND_URL;
+      else
+        return res.status(400).json({
+          error: "❌ مقدار service باید aleph / runway / runway_extend باشد.",
+        });
+
+      // 🟣 مرحله ۳: آماده‌سازی بدنه درخواست
+      const body = { prompt };
+
+      if (serviceType === "aleph") {
+        if (!videoUrl) throw new Error("❌ پارامتر videoUrl برای Aleph الزامی است.");
+        body.videoUrl = videoUrl;
+        if (referenceImageUpload) body.referenceImage = referenceImageUpload;
+        if (callBackUrl) body.callBackUrl = callBackUrl;
+        if (waterMark) body.waterMark = waterMark;
+        if (aspectRatio) body.aspectRatio = aspectRatio;
+        if (seed) body.seed = seed;
+        if (uploadCn !== undefined) body.uploadCn = uploadCn === "true" || uploadCn === true;
+      } else if (serviceType === "runway") {
+        if (videoUrl) body.videoUrl = videoUrl;
+        if (imageUrlUpload) body.imageUrl = imageUrlUpload;
+
+        if (!videoUrl && !imageUrlUpload && !aspectRatio) {
+          return res.status(400).json({
+            error: "❌ در حالت Text-to-Video (Runway بدون ویدیو و تصویر)، پارامتر aspectRatio الزامی است.",
+          });
+        }
+
+        if (callBackUrl) body.callBackUrl = callBackUrl;
+        if (waterMark) body.waterMark = waterMark;
+        if (aspectRatio) body.aspectRatio = aspectRatio;
+        if (duration) body.duration = Number(duration);
+        if (quality) body.quality = quality;
+      } else if (serviceType === "runway_extend") {
+        if (!taskId) throw new Error("❌ پارامتر taskId برای Runway Extend الزامی است.");
+        body.taskId = taskId;
+
+        if (callBackUrl) body.callBackUrl = callBackUrl;
+        if (waterMark) body.waterMark = waterMark;
+        if (duration) body.duration = Number(duration);
+        if (quality) body.quality = quality;
+      }
+
+      // 🟢 مرحله ۴: ارسال درخواست تولید
+      const genResp = await axios.post(genUrl, body, {
+        headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
       });
 
-    /* 🟣 مرحله ۳: آماده‌سازی بدنه درخواست */
-    const body = { prompt };
+      const returnedTaskId = genResp.data?.data?.taskId;
+      if (!returnedTaskId) throw new Error("❌ Task ID از پاسخ دریافت نشد.");
 
-    if (serviceType === "aleph") {
-      if (videoUrl) body.videoUrl = videoUrl;
-      if (referenceImage) body.referenceImage = referenceImage;
-      if (callBackUrl) body.callBackUrl = callBackUrl;
-      if (waterMark) body.waterMark = waterMark;
-      if (aspectRatio) body.aspectRatio = aspectRatio;
-      if (seed) body.seed = seed;
-    } else if (serviceType === "runway") {
-      if (videoUrl) body.videoUrl = videoUrl;
-      if (imageUrl) body.imageUrl = imageUrl;
-
-      if (!videoUrl && !imageUrl && !aspectRatio) {
-        return res.status(400).json({
-          error:
-            "❌ در حالت Text-to-Video (Runway بدون ویدیو و تصویر)، پارامتر aspectRatio الزامی است.",
-        });
-      }
-
-      if (callBackUrl) body.callBackUrl = callBackUrl;
-      if (waterMark) body.waterMark = waterMark;
-      if (aspectRatio) body.aspectRatio = aspectRatio;
-      if (duration) body.duration = duration;
-      if (quality) body.quality = quality;
-    } else if (serviceType === "runway_extend") {
-      if (!taskId) {
-        return res.status(400).json({
-          error: "❌ پارامتر taskId برای Runway Extend الزامی است.",
-        });
-      }
-      body.taskId = taskId;
-
-      if (callBackUrl) body.callBackUrl = callBackUrl;
-      if (waterMark) body.waterMark = waterMark;
-      if (duration) body.duration = duration;
-      if (quality) body.quality = quality;
-    }
-
-    /* 🟢 مرحله ۴: ارسال درخواست تولید */
-    const genResp = await axios.post(genUrl, body, {
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    const returnedTaskId = genResp.data?.data?.taskId;
-
-    if (!returnedTaskId) {
-      return res.status(500).json({
-        success: false,
-        upload: { downloadUrl: videoUrl },
-        error: "❌ Task ID از پاسخ دریافت نشد.",
+      // ✅ مرحله ۵: پاسخ موفق
+      res.status(200).json({
+        success: true,
+        upload: { videoUrl, imageUrl: imageUrlUpload, referenceImage: referenceImageUpload },
+        task: { taskId: returnedTaskId },
+        msg: `✅ تسک ${service.toUpperCase()} با موفقیت ایجاد شد.`,
         rawResponse: genResp.data,
       });
+    } catch (err) {
+      console.error("❌ Error creating task:", err.response?.data || err.message);
+      res.status(err.response?.status || 500).json({
+        success: false,
+        error: err.response?.data || err.message,
+      });
     }
-
-    /* ✅ مرحله ۵: پاسخ موفق */
-    res.status(200).json({
-      success: true,
-      upload: { downloadUrl: videoUrl },
-      task: { taskId: returnedTaskId },
-      msg: `✅ تسک ${service.toUpperCase()} با موفقیت ایجاد شد.`,
-      rawResponse: genResp.data,
-    });
-  } catch (err) {
-    console.error("❌ Error creating task:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({
-      success: false,
-      error: err.response?.data || err.message,
-    });
   }
-});
+);
 
 /* 📊 وضعیت تسک (Status) */
 router.get("/status/:service/:taskId", async (req, res) => {
   const { service, taskId } = req.params;
-  if (!taskId)
-    return res.status(400).json({ error: "❌ taskId الزامی است." });
+  if (!taskId) return res.status(400).json({ error: "❌ taskId الزامی است." });
 
   let statusUrl;
   const serviceType = service.toLowerCase();
@@ -198,12 +189,7 @@ router.get("/status/:service/:taskId", async (req, res) => {
       headers: { Authorization: `Bearer ${API_KEY}` },
     });
 
-    res.status(200).json({
-      success: true,
-      service,
-      taskId,
-      data: statusResp.data,
-    });
+    res.status(200).json({ success: true, service, taskId, data: statusResp.data });
   } catch (err) {
     console.error("❌ Status error:", err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
