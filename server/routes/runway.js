@@ -106,11 +106,11 @@ router.post(
         });
 
       // 🟣 مرحله ۳: آماده‌سازی بدنه درخواست بر اساس سرویس
-      const body = { prompt };
+      let body = { prompt };
 
       if (serviceType === "aleph") {
         if (!videoUrl) throw new Error("❌ پارامتر videoUrl برای Aleph الزامی است.");
-        body.videoUrl = videoUrl;
+        body = { prompt, videoUrl };
         if (referenceImageUpload) body.referenceImage = referenceImageUpload;
         if (callBackUrl) body.callBackUrl = callBackUrl;
         if (waterMark) body.waterMark = waterMark;
