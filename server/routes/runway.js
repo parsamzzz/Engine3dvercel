@@ -105,7 +105,7 @@ router.post(
           error: "❌ مقدار service باید aleph / runway / runway_extend باشد.",
         });
 
-      // 🟣 مرحله ۳: آماده‌سازی بدنه درخواست
+      // 🟣 مرحله ۳: آماده‌سازی بدنه درخواست بر اساس سرویس
       const body = { prompt };
 
       if (serviceType === "aleph") {
@@ -120,13 +120,11 @@ router.post(
       } else if (serviceType === "runway") {
         if (videoUrl) body.videoUrl = videoUrl;
         if (imageUrlUpload) body.imageUrl = imageUrlUpload;
-
         if (!videoUrl && !imageUrlUpload && !aspectRatio) {
           return res.status(400).json({
             error: "❌ در حالت Text-to-Video (Runway بدون ویدیو و تصویر)، پارامتر aspectRatio الزامی است.",
           });
         }
-
         if (callBackUrl) body.callBackUrl = callBackUrl;
         if (waterMark) body.waterMark = waterMark;
         if (aspectRatio) body.aspectRatio = aspectRatio;
@@ -135,7 +133,6 @@ router.post(
       } else if (serviceType === "runway_extend") {
         if (!taskId) throw new Error("❌ پارامتر taskId برای Runway Extend الزامی است.");
         body.taskId = taskId;
-
         if (callBackUrl) body.callBackUrl = callBackUrl;
         if (waterMark) body.waterMark = waterMark;
         if (duration) body.duration = Number(duration);
