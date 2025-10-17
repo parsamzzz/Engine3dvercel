@@ -104,15 +104,43 @@ router.post(
           return res.status(400).json({ error: '❌ مدل نامعتبر است.' });
       }
 
-      // 🧠 پارامترهای مشترک بین همه مدل‌ها
-      if (aspect_ratio) input.aspect_ratio = aspect_ratio;
-      if (resolution) input.resolution = resolution;
-      if (duration) input.duration = duration;
-      if (camera_fixed) input.camera_fixed = camera_fixed === 'true';
-      if (seed) input.seed = Number(seed);
-      if (enable_safety_checker)
-        input.enable_safety_checker = enable_safety_checker === 'true';
+      // 🧠 چک پارامترهای مشترک بین همه مدل‌ها
+      const validRatios = ['16:9','4:3','1:1','3:4','9:16','21:9','9:21'];
+      if (aspect_ratio) {
+        if (!validRatios.includes(aspect_ratio))
+          return res.status(400).json({ error: '❌ aspect_ratio نامعتبر است.' });
+        input.aspect_ratio = aspect_ratio;
+      }
 
+      const validResolutions = ['480p', '720p', '1080p'];
+      if (resolution) {
+        if (!validResolutions.includes(resolution))
+          return res.status(400).json({ error: '❌ resolution نامعتبر است.' });
+        input.resolution = resolution;
+      }
+
+      const validDurations = ['5', '10'];
+      if (duration) {
+        if (!validDurations.includes(duration.toString()))
+          return res.status(400).json({ error: '❌ duration نامعتبر است.' });
+        input.duration = duration.toString();
+      }
+
+      if (camera_fixed !== undefined)
+        input.camera_fixed = camera_fixed === 'true' || camera_fixed === true;
+
+      if (enable_safety_checker !== undefined)
+        input.enable_safety_checker =
+          enable_safety_checker === 'true' || enable_safety_checker === true;
+
+      if (seed !== undefined && seed !== null && seed !== '') {
+        const numSeed = Number(seed);
+        if (isNaN(numSeed) || numSeed < -1 || numSeed > 2147483647)
+          return res.status(400).json({ error: '❌ seed نامعتبر است.' });
+        input.seed = numSeed;
+      }
+
+      // ✅ ساخت body نهایی
       const body = { model, input };
       if (callBackUrl) body.callBackUrl = callBackUrl;
 
@@ -135,7 +163,7 @@ router.post(
   }
 );
 
-// 🕓 گرفتن وضعیت Task
+// 🕓 گرفتن وضعیت Task بدون فیلد param
 router.get('/recordInfo', async (req, res) => {
   try {
     const { taskId } = req.query;
@@ -146,7 +174,15 @@ router.get('/recordInfo', async (req, res) => {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
-    res.json(response.data);
+    // حذف فیلد param از داده برگشتی
+    const data = { ...response.data.data };
+    if ('param' in data) delete data.param;
+
+    res.json({
+      code: response.data.code,
+      msg: response.data.msg,
+      data
+    });
   } catch (err) {
     console.error('❌ خطا در گرفتن وضعیت:', err.response?.data || err.message);
     res.status(500).json({
