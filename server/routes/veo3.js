@@ -6,7 +6,7 @@ import FormData from 'form-data';
 const router = express.Router();
 
 const API_KEY = process.env.KIE_API_KEY || 'dbd18fd3191266b86bbf18adb81d67d4';
-const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
+const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload'; // بررسی شود
 const GENERATE_URL = 'https://api.kie.ai/api/v1/veo/generate';
 const RECORD_INFO_URL = 'https://api.kie.ai/api/v1/veo/record-info';
 const GET_1080P_URL = 'https://api.kie.ai/api/v1/veo/get-1080p-video';
@@ -20,12 +20,12 @@ router.get('/', (req, res) => {
 });
 
 /* 📤 ایجاد Task تولید ویدیو */
-router.post('/generate', upload.array('images', 2), async (req, res) => {
+router.post('/generate', upload.single('image'), async (req, res) => {
   try {
     const {
       prompt,
-      model = 'veo3',                    
-      aspectRatio = '16:9',              
+      model = 'veo3',                    // 'veo3' یا 'veo3_fast'
+      aspectRatio = '16:9',              // '16:9', '9:16', یا 'Auto'
       seeds,
       watermark,
       callBackUrl,
@@ -33,22 +33,23 @@ router.post('/generate', upload.array('images', 2), async (req, res) => {
       enableTranslation = true
     } = req.body;
 
-    const images = req.files || [];
-    let imageUrls = [];
-
     // ✅ حداقل یکی از prompt یا تصویر باید وجود داشته باشد
-    if (!prompt && images.length === 0) {
-      return res.status(400).json({ error: '❌ حداقل یکی از فیلدهای prompt یا تصویر الزامی است.' });
+    if (!prompt && !req.file) {
+      return res.status(400).json({ error: '❌ فیلد prompt یا تصویر الزامی است.' });
     }
 
-    /* 🟡 آپلود تصاویر */
-    for (const file of images) {
+    /* 🟡 آپلود تصویر در صورت وجود (image-to-video) */
+    let imageUrls;
+    if (req.file) {
       const formData = new FormData();
-      formData.append('file', file.buffer, file.originalname);
+      formData.append('file', req.file.buffer, req.file.originalname);
       formData.append('uploadPath', 'images/user-uploads');
 
       const uploadResp = await axios.post(FILE_UPLOAD_URL, formData, {
-        headers: { Authorization: `Bearer ${API_KEY}`, ...formData.getHeaders() }
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          ...formData.getHeaders()
+        }
       });
 
       const uploadData = uploadResp.data;
@@ -58,51 +59,39 @@ router.post('/generate', upload.array('images', 2), async (req, res) => {
           rawResponse: uploadData
         });
       }
-      imageUrls.push(uploadData.data.downloadUrl);
+      imageUrls = [uploadData.data.downloadUrl];
     }
 
     /* 🔵 بررسی seeds */
     let seedValue;
     if (seeds) {
       const parsedSeed = parseInt(seeds);
-      if (isNaN(parsedSeed) || parsedSeed < 10000 || parsedSeed > 99999) {
-        return res.status(400).json({ error: '❌ seeds باید عدد بین 10000 تا 99999 باشد.' });
+      if (parsedSeed < 10000 || parsedSeed > 99999) {
+        return res.status(400).json({ error: '❌ seeds باید بین 10000 تا 99999 باشد.' });
       }
       seedValue = parsedSeed;
     }
 
-    /* 🟢 تعیین حالت Task */
-    let taskMode;
-    if (prompt && images.length > 0) {
-      taskMode = 'reference-to-video';
-      if (model !== 'veo3_fast') model = 'veo3_fast';
-      if (aspectRatio !== '16:9') return res.status(400).json({ error: '❌ برای Reference-to-Video فقط aspectRatio=16:9 مجاز است.' });
-      if (images.length > 2) return res.status(400).json({ error: '❌ Reference-to-Video حداکثر 2 تصویر مجاز است.' });
-    } else if (prompt) {
-      taskMode = 'text-to-video';
-    } else if (images.length > 0) {
-      taskMode = 'first-and-last-frames';
-      if (images.length > 2) return res.status(400).json({ error: '❌ First-and-Last Frames حداکثر 2 تصویر مجاز است.' });
-      if (!model) model = 'veo3';
-    }
-
-    /* 🟢 آماده سازی body درخواست */
+    /* 🟢 آماده سازی body درخواست Veo3 */
     const body = {
+      prompt,
       model,
       aspectRatio,
       enableFallback: enableFallback === 'true' || enableFallback === true,
       enableTranslation: enableTranslation === 'true' || enableTranslation === true
     };
 
-    if (prompt) body.prompt = prompt;
-    if (imageUrls.length) body.imageUrls = imageUrls;
+    if (imageUrls) body.imageUrls = imageUrls;
     if (seedValue) body.seeds = seedValue;
     if (watermark) body.watermark = watermark;
     if (callBackUrl) body.callBackUrl = callBackUrl;
 
     /* 🟣 ارسال درخواست تولید ویدیو */
     const taskResp = await axios.post(GENERATE_URL, body, {
-      headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' }
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        'Content-Type': 'application/json'
+      }
     });
 
     if (taskResp.data.code !== 200 || !taskResp.data.data?.taskId) {
@@ -114,8 +103,8 @@ router.post('/generate', upload.array('images', 2), async (req, res) => {
 
     res.status(200).json({
       taskId: taskResp.data.data.taskId,
-      msg: `✅ Task با موفقیت ایجاد شد (${taskMode}).`,
-      uploadImages: imageUrls
+      msg: '✅ Task Veo3 با موفقیت ایجاد شد.',
+      uploadImage: imageUrls ? imageUrls[0] : null
     });
 
   } catch (err) {
@@ -128,7 +117,8 @@ router.post('/generate', upload.array('images', 2), async (req, res) => {
 router.get('/recordInfo/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
-    if (!taskId) return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
+    if (!taskId)
+      return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
 
     const statusResp = await axios.get(`${RECORD_INFO_URL}?taskId=${taskId}`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
@@ -145,16 +135,23 @@ router.get('/recordInfo/:taskId', async (req, res) => {
 router.get('/get-1080p/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
-    if (!taskId) return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
+    if (!taskId)
+      return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
 
+    // دریافت اطلاعات Task
     const statusResp = await axios.get(`${RECORD_INFO_URL}?taskId=${taskId}`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
     const record = statusResp.data.data;
-    if (record.fallbackFlag) return res.status(400).json({ error: '❌ ویدیو fallback قابل دریافت 1080P نیست.' });
-    if (record.aspectRatio !== '16:9') return res.status(400).json({ error: '❌ فقط ویدیوهای 16:9 از 1080P پشتیبانی می‌کنند.' });
+    if (record.fallbackFlag) {
+      return res.status(400).json({ error: '❌ ویدیو fallback قابل دریافت 1080P نیست.' });
+    }
+    if (record.aspectRatio !== '16:9') {
+      return res.status(400).json({ error: '❌ فقط ویدیوهای 16:9 از 1080P پشتیبانی می‌کنند.' });
+    }
 
+    // دریافت ویدیوی HD
     const videoResp = await axios.get(`${GET_1080P_URL}?taskId=${taskId}&index=0`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
