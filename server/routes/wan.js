@@ -13,10 +13,12 @@ const RECORD_INFO_URL = 'https://api.kie.ai/api/v1/jobs/recordInfo';
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// --- مسیر تست ---
 router.get('/', (req, res) => {
   res.send('✅ WAN AI API route is working.');
 });
 
+// --- ایجاد تسک ---
 router.post('/createTask', upload.single('image'), async (req, res) => {
   try {
     const {
@@ -36,7 +38,7 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
 
     let image_url = null;
 
-    // آپلود تصویر در صورت ارسال فایل
+    // --- آپلود تصویر ---
     if (req.file) {
       const allowed = ['image/jpeg', 'image/png', 'image/webp'];
       if (!allowed.includes(req.file.mimetype))
@@ -63,34 +65,63 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
       image_url = uploadData.data.downloadUrl;
     }
 
-    // ساخت input بر اساس مدل
     const input = {};
 
+    // --- ساخت input بر اساس مدل ---
     switch (model) {
+      // === Text-to-Video Turbo ===
       case 'wan/2-2-a14b-text-to-video-turbo':
-      case 'wan/2-5-text-to-video':
-        if (!prompt) return res.status(400).json({ error: '❌ prompt الزامی است برای این مدل.' });
+        if (!prompt) return res.status(400).json({ error: '❌ prompt الزامی است.' });
         input.prompt = prompt;
-        if (resolution) input.resolution = resolution;
-        if (aspect_ratio) input.aspect_ratio = aspect_ratio;
-        if (enable_prompt_expansion != null) input.enable_prompt_expansion = enable_prompt_expansion === 'true' || enable_prompt_expansion === true;
-        if (seed != null) input.seed = parseInt(seed);
-        if (acceleration) input.acceleration = acceleration;
-        if (negative_prompt) input.negative_prompt = negative_prompt;
+
+        if (resolution && ['480p','580p','720p'].includes(resolution)) input.resolution = resolution;
+        if (aspect_ratio && ['16:9','9:16','1:1'].includes(aspect_ratio)) input.aspect_ratio = aspect_ratio;
+
+        if (enable_prompt_expansion != null) input.enable_prompt_expansion = Boolean(enable_prompt_expansion);
+        if (seed != null) input.seed = Number(seed);
+        if (acceleration && ['none','regular'].includes(acceleration)) input.acceleration = acceleration;
         break;
 
-      case 'wan/2-2-a14b-image-to-video-turbo':
-      case 'wan/2-5-image-to-video':
-        if (!prompt && !image_url) return res.status(400).json({ error: '❌ prompt یا image الزامی است برای این مدل.' });
-        if (prompt) input.prompt = prompt;
-        if (image_url) input.image_url = image_url;
-        if (resolution) input.resolution = resolution;
-        input.aspect_ratio = aspect_ratio || (image_url ? 'auto' : '16:9');
-        if (enable_prompt_expansion != null) input.enable_prompt_expansion = enable_prompt_expansion === 'true' || enable_prompt_expansion === true;
-        if (seed != null) input.seed = parseInt(seed);
-        if (acceleration) input.acceleration = acceleration;
-        if (duration) input.duration = duration;
+      // === Text-to-Video 2.5 ===
+      case 'wan/2-5-text-to-video':
+        if (!prompt) return res.status(400).json({ error: '❌ prompt الزامی است.' });
+        input.prompt = prompt;
+
+        if (resolution && ['720p','1080p'].includes(resolution)) input.resolution = resolution;
+        if (aspect_ratio && ['16:9','9:16','1:1'].includes(aspect_ratio)) input.aspect_ratio = aspect_ratio;
         if (negative_prompt) input.negative_prompt = negative_prompt;
+
+        if (enable_prompt_expansion != null) input.enable_prompt_expansion = Boolean(enable_prompt_expansion);
+        if (seed != null) input.seed = Number(seed);
+        break;
+
+      // === Image-to-Video Turbo ===
+      case 'wan/2-2-a14b-image-to-video-turbo':
+        if (!prompt || !image_url) return res.status(400).json({ error: '❌ prompt و image_url الزامی است.' });
+        input.prompt = prompt;
+        input.image_url = image_url;
+
+        if (resolution && ['480p','580p','720p'].includes(resolution)) input.resolution = resolution;
+        input.aspect_ratio = aspect_ratio || 'auto';
+
+        if (enable_prompt_expansion != null) input.enable_prompt_expansion = Boolean(enable_prompt_expansion);
+        if (seed != null) input.seed = Number(seed);
+        if (acceleration && ['none','regular'].includes(acceleration)) input.acceleration = acceleration;
+        break;
+
+      // === Image-to-Video 2.5 ===
+      case 'wan/2-5-image-to-video':
+        if (!prompt || !image_url) return res.status(400).json({ error: '❌ prompt و image_url الزامی است.' });
+        input.prompt = prompt;
+        input.image_url = image_url;
+
+        if (duration && ['5','10'].includes(duration)) input.duration = duration;
+        if (resolution && ['720p','1080p'].includes(resolution)) input.resolution = resolution;
+        input.aspect_ratio = aspect_ratio || 'auto';
+        if (negative_prompt) input.negative_prompt = negative_prompt;
+
+        if (enable_prompt_expansion != null) input.enable_prompt_expansion = Boolean(enable_prompt_expansion);
+        if (seed != null) input.seed = Number(seed);
         break;
 
       default:
@@ -120,6 +151,7 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
   }
 });
 
+// --- وضعیت Task ---
 router.get('/recordInfo/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
