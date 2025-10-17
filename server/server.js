@@ -24,7 +24,7 @@ import lumaRoute from './routes/luma.js';
 import runwayRoute from './routes/runway.js';
 import klingRoute from './routes/kling.js';
 import seedanceRoute from './routes/seedance.js';
-import sora2Route from './routes/sora.js';
+import soraRoute from './routes/sora.js';
 
 
 
