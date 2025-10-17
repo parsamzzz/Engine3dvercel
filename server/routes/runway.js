@@ -89,25 +89,18 @@ router.post(
     }
 
     try {
-      // 🟢 مرحله ۱: آپلود فایل‌ها
       let videoUrl = req.files?.video?.[0] ? await uploadAnyFile(req.files.video[0], "video") : null;
       let imageUrlUpload = req.files?.imageUrl?.[0] ? await uploadAnyFile(req.files.imageUrl[0], "image") : null;
       let referenceImageUpload = req.files?.referenceImage?.[0] ? await uploadAnyFile(req.files.referenceImage[0], "image") : null;
 
-      // 🔵 مرحله ۲: انتخاب URL بر اساس سرویس
       let genUrl;
       const serviceType = service.toLowerCase();
       if (serviceType === "aleph") genUrl = ALEPH_GENERATE_URL;
       else if (serviceType === "runway") genUrl = RUNWAY_GENERATE_URL;
       else if (serviceType === "runway_extend" || serviceType === "extend") genUrl = RUNWAY_EXTEND_URL;
-      else
-        return res.status(400).json({
-          error: "❌ مقدار service باید aleph / runway / runway_extend باشد.",
-        });
+      else return res.status(400).json({ error: "❌ مقدار service باید aleph / runway / runway_extend باشد." });
 
-      // 🟣 مرحله ۳: آماده‌سازی بدنه درخواست بر اساس سرویس
       let body = { prompt };
-
       if (serviceType === "aleph") {
         if (!videoUrl) throw new Error("❌ پارامتر videoUrl برای Aleph الزامی است.");
         body = { prompt, videoUrl };
@@ -139,7 +132,6 @@ router.post(
         if (quality) body.quality = quality;
       }
 
-      // 🟢 مرحله ۴: ارسال درخواست تولید
       const genResp = await axios.post(genUrl, body, {
         headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
       });
@@ -147,10 +139,9 @@ router.post(
       const returnedTaskId = genResp.data?.data?.taskId;
       if (!returnedTaskId) throw new Error("❌ Task ID از پاسخ دریافت نشد.");
 
-      // ✅ مرحله ۵: پاسخ موفق
+      // ✅ فقط taskId در پاسخ، upload حذف شد
       res.status(200).json({
         success: true,
-        upload: { videoUrl, imageUrl: imageUrlUpload, referenceImage: referenceImageUpload },
         task: { taskId: returnedTaskId },
         msg: `✅ تسک ${service.toUpperCase()} با موفقیت ایجاد شد.`,
         rawResponse: genResp.data,
@@ -172,21 +163,23 @@ router.get("/status/:service/:taskId", async (req, res) => {
 
   let statusUrl;
   const serviceType = service.toLowerCase();
-
   if (serviceType === "aleph") statusUrl = `${ALEPH_STATUS_URL}?taskId=${taskId}`;
-  else if (serviceType === "runway" || serviceType === "runway_extend")
-    statusUrl = `${RUNWAY_STATUS_URL}?taskId=${taskId}`;
-  else
-    return res.status(400).json({
-      error: "❌ service باید aleph یا runway باشد.",
-    });
+  else if (serviceType === "runway" || serviceType === "runway_extend") statusUrl = `${RUNWAY_STATUS_URL}?taskId=${taskId}`;
+  else return res.status(400).json({ error: "❌ service باید aleph یا runway باشد." });
 
   try {
     const statusResp = await axios.get(statusUrl, {
       headers: { Authorization: `Bearer ${API_KEY}` },
     });
 
-    res.status(200).json({ success: true, service, taskId, data: statusResp.data });
+    // ✅ پاک کردن generateParam و URL ها
+    const cleanData = { ...statusResp.data };
+    if (cleanData.data?.data) {
+      delete cleanData.data.data.generateParam;
+      if (cleanData.data.data.videoInfo) delete cleanData.data.data.videoInfo;
+    }
+
+    res.status(200).json({ success: true, service, taskId, data: cleanData });
   } catch (err) {
     console.error("❌ Status error:", err.response?.data || err.message);
     res.status(err.response?.status || 500).json({

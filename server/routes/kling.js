@@ -160,7 +160,7 @@ router.post(
   }
 );
 
-// 🔹 گرفتن وضعیت Task
+// 🔹 گرفتن وضعیت Task (بدون فیلد param)
 router.get('/recordInfo', async (req, res) => {
   try {
     const { taskId } = req.query;
@@ -171,7 +171,11 @@ router.get('/recordInfo', async (req, res) => {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
-    res.json(response.data);
+    // ✅ حذف فیلد param در پاسخ قبل از ارسال به کلاینت
+    const cleanData = { ...response.data };
+    if (cleanData?.data?.param) delete cleanData.data.param;
+
+    res.json(cleanData);
   } catch (err) {
     console.error(err.response?.data || err.message);
     res.status(500).json({
