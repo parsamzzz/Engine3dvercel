@@ -165,6 +165,10 @@ router.get('/recordInfo/:taskId', async (req, res) => {
     if (statusResp.data?.data?.resultJson) {
       try {
         parsedResults = JSON.parse(statusResp.data.data.resultJson);
+
+        // حذف param از parsedResults
+        if (parsedResults.param) delete parsedResults.param;
+
       } catch {
         parsedResults = null;
       }
@@ -176,5 +180,6 @@ router.get('/recordInfo/:taskId', async (req, res) => {
     res.status(500).json({ error: '❌ خطا در دریافت وضعیت Task.' });
   }
 });
+
 
 export default router;
