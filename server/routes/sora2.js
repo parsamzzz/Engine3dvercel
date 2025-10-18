@@ -155,7 +155,13 @@ router.get('/recordInfo/:taskId', async (req, res) => {
       headers: { Authorization: `Bearer ${key}` }
     });
 
-    res.status(200).json(statusResp.data);
+    // 🧹 حذف فقط فیلد param بدون تغییر سایر داده‌ها
+    const cleanData = structuredClone(statusResp.data); // کپی عمیق
+    if (cleanData?.data?.param !== undefined) {
+      delete cleanData.data.param;
+    }
+
+    res.status(200).json(cleanData);
   } catch (err) {
     console.error('[RecordInfo Error]:', err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
@@ -163,5 +169,6 @@ router.get('/recordInfo/:taskId', async (req, res) => {
     });
   }
 });
+
 
 export default router;

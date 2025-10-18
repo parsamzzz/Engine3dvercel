@@ -71,7 +71,6 @@ router.post('/createTask', upload.array('images', 5), async (req, res) => {
       }
     }
 
-    // 🔹 آماده‌سازی input بر اساس مدل
     const input = {};
 
     switch (model) {

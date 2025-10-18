@@ -145,13 +145,27 @@ router.post('/generate', upload.array('images', 3), async (req, res) => {
 router.get('/record-info/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
-    if (!taskId) return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
 
+    if (!taskId) {
+      return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
+    }
+
+    // درخواست وضعیت Task از API اصلی
     const statusResp = await axios.get(`${RECORD_INFO_URL}?taskId=${taskId}`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
-    res.status(200).json(statusResp.data);
+    // داده اصلی
+    const data = statusResp.data;
+
+    // حذف paramJson از داده در صورت وجود
+    if (data?.data?.paramJson) {
+      delete data.data.paramJson;
+    }
+
+    // برگرداندن پاسخ اصلاح شده
+    res.status(200).json(data);
+
   } catch (err) {
     console.error('❌ Status error:', err.response?.data || err.message);
     res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
