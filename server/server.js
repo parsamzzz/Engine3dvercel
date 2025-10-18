@@ -26,6 +26,7 @@ import klingRoute from './routes/kling.js';
 import seedanceRoute from './routes/seedance.js';
 import soraRoute from './routes/sora.js';
 import veo3Route from './routes/veo3.js';
+import hailuoRoute from './routes/hailuo.js';
 
 
 
@@ -82,6 +83,8 @@ app.use('/api/kling', klingRoute);
 app.use('/api/seedance', seedanceRoute);
 app.use('/api/sora', soraRoute);
 app.use('/api/veo3', veo3Route);
+app.use('/api/hailuo', hailuoRoute);
+
 
 
 
