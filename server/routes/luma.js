@@ -177,9 +177,10 @@ router.get('/reframe/status/:taskId', async (req, res) => {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
-    // حذف paramJson و originUrls بدون تغییر بقیه
+    // حذف param و originUrls بدون تغییر بقیه
     const data = { ...statusResp.data.data };
-    delete data.paramJson;
+    delete data.param; // 👈 این خط اضافه شد
+    delete data.paramJson; // برای اطمینان
     if (data.response) delete data.response.originUrls;
 
     res.status(200).json({ ...statusResp.data, data });
@@ -188,5 +189,6 @@ router.get('/reframe/status/:taskId', async (req, res) => {
     res.status(500).json({ error: err.response?.data || err.message });
   }
 });
+
 
 export default router;
