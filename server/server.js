@@ -25,7 +25,7 @@ import runwayRoute from './routes/runway.js';
 import klingRoute from './routes/kling.js';
 import seedanceRoute from './routes/seedance.js';
 import soraRoute from './routes/sora.js';
-import veoRoute from './routes/veo.js';
+import veoRoute from './routes/veo3.js';
 
 
 
@@ -81,7 +81,7 @@ app.use('/api/runway', runwayRoute);
 app.use('/api/kling', klingRoute);
 app.use('/api/seedance', seedanceRoute);
 app.use('/api/sora', soraRoute);
-app.use('/api/veo', veoRoute);
+app.use('/api/veo3', veoRoute);
 
 
 

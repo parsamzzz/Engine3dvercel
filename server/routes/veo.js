@@ -1,168 +1,149 @@
 import express from 'express';
-import multer from 'multer';
 import axios from 'axios';
-import FormData from 'form-data';
+import multer from 'multer';
+import fs from 'fs';
+import cors from 'cors';
 
 const router = express.Router();
+const upload = multer({ dest: 'tmp/' });
 
-const API_KEY = process.env.KIE_API_KEY || 'dbd18fd3191266b86bbf18adb81d67d4';
-const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
-const GENERATE_URL = 'https://api.kie.ai/api/v1/veo/generate';
-const RECORD_INFO_URL = 'https://api.kie.ai/api/v1/veo/record-info';
-const GET_1080P_URL = 'https://api.kie.ai/api/v1/veo/get-1080p-video';
+const GEMINI_API_KEY = "AIzaSyCMmOaJFfHY2PnvNe2jAJ8gLb8ToFQxUMc";
+const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-/* 📦 دریافت فایل در حافظه */
-const upload = multer({ storage: multer.memoryStorage() });
+const ALLOWED_ORIGINS = [
+ 'https://threedify.org',
+  'https://chatbot.threedify.org',
+  'https://en.threedify.org'
+];
 
-/* 🟢 تست سلامت API */
-router.get('/', (req, res) => {
-  res.send('✅ Veo3 API route is working.');
-});
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, false); // درخواست‌های بدون Origin رد میشه
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not Allowed Your IP Address Banned"));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
 
-/* 📤 ایجاد Task تولید ویدیو */
-router.post('/generate', upload.array('images', 2), async (req, res) => {
+router.use(cors(corsOptions));
+router.options('*', cors(corsOptions));
+
+// حافظه موقت برای وضعیت عملیات
+const operations = {};
+
+// تابع کمکی برای گرفتن operationId
+const extractOperationId = (fullName) => fullName.split('/').pop();
+
+// تابع کمکی برای گرفتن fileId از لینک گوگل
+const extractFileId = (url) => {
+  const match = url.match(/\/files\/([^:]+):download/);
+  return match ? match[1] : null;
+};
+
+// ==== مسیر تولید ویدیو ====
+router.post('/generate', upload.single('image'), async (req, res) => {
   try {
-    const {
-      prompt,
-      model = 'veo3',                    
-      aspectRatio = '16:9',              
-      seeds,
-      watermark,
-      callBackUrl,
-      enableFallback = false,
-      enableTranslation = true
-    } = req.body;
+    const { prompt } = req.body;
+    const imageFile = req.file;
 
-    const images = req.files || [];
-    let imageUrls = [];
+    if (!prompt) return res.status(400).json({ success: false, error: "prompt required" });
 
-    // ✅ حداقل یکی از prompt یا تصویر باید وجود داشته باشد
-    if (!prompt && images.length === 0) {
-      return res.status(400).json({ error: '❌ حداقل یکی از فیلدهای prompt یا تصویر الزامی است.' });
+    let instance = { prompt };
+    if (imageFile) {
+      const imageData = fs.readFileSync(imageFile.path);
+      instance.image = {
+        imageBytes: imageData.toString('base64'),
+        mimeType: imageFile.mimetype || "image/png"
+      };
+      fs.unlinkSync(imageFile.path);
     }
 
-    /* 🟡 آپلود تصاویر */
-    for (const file of images) {
-      const formData = new FormData();
-      formData.append('file', file.buffer, file.originalname);
-      formData.append('uploadPath', 'images/user-uploads');
-
-      const uploadResp = await axios.post(FILE_UPLOAD_URL, formData, {
-        headers: { Authorization: `Bearer ${API_KEY}`, ...formData.getHeaders() }
-      });
-
-      const uploadData = uploadResp.data;
-      if (!uploadData.success || !uploadData.data?.downloadUrl) {
-        return res.status(500).json({
-          error: '❌ آپلود تصویر شکست خورد.',
-          rawResponse: uploadData
-        });
+    const response = await axios.post(
+      `${BASE_URL}/models/veo-3.0-fast-generate-001:predictLongRunning`,
+      { instances: [instance] },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': GEMINI_API_KEY
+        }
       }
-      imageUrls.push(uploadData.data.downloadUrl);
-    }
+    );
 
-    /* 🔵 بررسی seeds */
-    let seedValue;
-    if (seeds) {
-      const parsedSeed = parseInt(seeds);
-      if (isNaN(parsedSeed) || parsedSeed < 10000 || parsedSeed > 99999) {
-        return res.status(400).json({ error: '❌ seeds باید عدد بین 10000 تا 99999 باشد.' });
-      }
-      seedValue = parsedSeed;
-    }
+    const fullOperationName = response.data.name;
+    const operationId = extractOperationId(fullOperationName);
+    operations[operationId] = { status: 'pending' };
 
-    /* 🟢 تعیین حالت Task */
-    let taskMode;
-    if (prompt && images.length > 0) {
-      taskMode = 'reference-to-video';
-      if (model !== 'veo3_fast') model = 'veo3_fast';
-      if (aspectRatio !== '16:9') return res.status(400).json({ error: '❌ برای Reference-to-Video فقط aspectRatio=16:9 مجاز است.' });
-      if (images.length > 2) return res.status(400).json({ error: '❌ Reference-to-Video حداکثر 2 تصویر مجاز است.' });
-    } else if (prompt) {
-      taskMode = 'text-to-video';
-    } else if (images.length > 0) {
-      taskMode = 'first-and-last-frames';
-      if (images.length > 2) return res.status(400).json({ error: '❌ First-and-Last Frames حداکثر 2 تصویر مجاز است.' });
-      if (!model) model = 'veo3';
-    }
-
-    /* 🟢 آماده سازی body درخواست */
-    const body = {
-      model,
-      aspectRatio,
-      enableFallback: enableFallback === 'true' || enableFallback === true,
-      enableTranslation: enableTranslation === 'true' || enableTranslation === true
-    };
-
-    if (prompt) body.prompt = prompt;
-    if (imageUrls.length) body.imageUrls = imageUrls;
-    if (seedValue) body.seeds = seedValue;
-    if (watermark) body.watermark = watermark;
-    if (callBackUrl) body.callBackUrl = callBackUrl;
-
-    /* 🟣 ارسال درخواست تولید ویدیو */
-    const taskResp = await axios.post(GENERATE_URL, body, {
-      headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' }
-    });
-
-    if (taskResp.data.code !== 200 || !taskResp.data.data?.taskId) {
-      return res.status(500).json({
-        error: '❌ Task ایجاد نشد.',
-        rawResponse: taskResp.data
-      });
-    }
-
-    res.status(200).json({
-      taskId: taskResp.data.data.taskId,
-      msg: `✅ Task با موفقیت ایجاد شد (${taskMode}).`,
-      uploadImages: imageUrls
-    });
-
+    res.json({ success: true, operationId });
   } catch (err) {
-    console.error('❌ Error:', err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+    console.error(err?.response?.data || err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-/* 📊 بررسی وضعیت Task */
-router.get('/recordInfo/:taskId', async (req, res) => {
+// ==== مسیر بررسی وضعیت ====
+router.get('/status/:operationId', async (req, res) => {
   try {
-    const { taskId } = req.params;
-    if (!taskId) return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
+    const { operationId } = req.params;
+    if (!operationId) return res.status(400).json({ success: false, error: "operationId required" });
 
-    const statusResp = await axios.get(`${RECORD_INFO_URL}?taskId=${taskId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
+    const fullOperationPath = `models/veo-3.0-fast-generate-001/operations/${operationId}`;
+    const statusRes = await axios.get(`${BASE_URL}/${fullOperationPath}`, {
+      headers: { 'x-goog-api-key': GEMINI_API_KEY }
     });
 
-    res.status(200).json(statusResp.data);
+    const done = statusRes.data.done;
+    let fileId = null;
+
+    if (done) {
+      const uri = statusRes.data.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
+      fileId = extractFileId(uri);
+      operations[operationId].status = 'done';
+      operations[operationId].fileId = fileId;
+    } else {
+      operations[operationId].status = 'pending';
+    }
+
+    res.json({
+      success: true,
+      status: operations[operationId].status,
+      downloadUrl: done ? `/veo/download/${operationId}` : null
+    });
   } catch (err) {
-    console.error('❌ Status error:', err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+    console.error(err?.response?.data || err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-/* 🎬 دریافت ویدیوی 1080P (فقط برای 16:9 و بدون fallback) */
-router.get('/get-1080p/:taskId', async (req, res) => {
+// ==== مسیر دانلود و پخش ویدیو ====
+router.get('/download/:operationId', async (req, res) => {
   try {
-    const { taskId } = req.params;
-    if (!taskId) return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
+    const { operationId } = req.params;
+    const { download } = req.query;
+    const op = operations[operationId];
 
-    const statusResp = await axios.get(`${RECORD_INFO_URL}?taskId=${taskId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
+    if (!op || !op.fileId) {
+      return res.status(404).json({ success: false, error: "Video not ready" });
+    }
+
+    const googleUrl = `${BASE_URL}/files/${op.fileId}:download?alt=media`;
+    const videoRes = await axios.get(googleUrl, {
+      headers: { 'x-goog-api-key': GEMINI_API_KEY },
+      responseType: 'stream'
     });
 
-    const record = statusResp.data.data;
-    if (record.fallbackFlag) return res.status(400).json({ error: '❌ ویدیو fallback قابل دریافت 1080P نیست.' });
-    if (record.aspectRatio !== '16:9') return res.status(400).json({ error: '❌ فقط ویدیوهای 16:9 از 1080P پشتیبانی می‌کنند.' });
+    res.setHeader('Content-Type', 'video/mp4');
+    if (download === '1') {
+      res.setHeader('Content-Disposition', `attachment; filename="txt2vid-${operationId}.mp4"`);
+    }
 
-    const videoResp = await axios.get(`${GET_1080P_URL}?taskId=${taskId}&index=0`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
-
-    res.status(200).json(videoResp.data);
+    videoRes.data.pipe(res);
   } catch (err) {
-    console.error('❌ 1080P error:', err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+    console.error(err?.response?.data || err.message);
+    res.status(500).json({ success: false, error: "Download failed" });
   }
 });
 
