@@ -25,7 +25,6 @@ const uploadFile = async (file, folder = 'videos/user-uploads') => {
   const allowed = ['.mp4', '.mov', '.avi', '.jpeg', '.jpg', '.png', '.webp'];
   if (!allowed.includes(ext)) throw new Error(`❌ فرمت ${ext} مجاز نیست.`);
 
-  // محدودیت حجم
   if (['.mp4', '.mov', '.avi'].includes(ext) && file.size > 500 * 1024 * 1024)
     throw new Error('❌ حجم ویدیو نباید بیش از 500MB باشد.');
   if (['.jpeg', '.jpg', '.png', '.webp'].includes(ext) && file.size > 10 * 1024 * 1024)
@@ -100,7 +99,13 @@ router.get('/modify/status/:taskId', async (req, res) => {
     const statusResp = await axios.get(`${LUMA_MODIFY_STATUS_URL}?taskId=${taskId}`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
-    res.status(200).json(statusResp.data);
+
+    // حذف paramJson و originUrls بدون تغییر بقیه
+    const data = { ...statusResp.data.data };
+    delete data.paramJson;
+    if (data.response) delete data.response.originUrls;
+
+    res.status(200).json({ ...statusResp.data, data });
   } catch (err) {
     console.error('❌ Modify status error:', err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });
@@ -171,7 +176,13 @@ router.get('/reframe/status/:taskId', async (req, res) => {
     const statusResp = await axios.get(`${LUMA_REFRAME_STATUS_URL}?taskId=${taskId}`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
-    res.status(200).json(statusResp.data);
+
+    // حذف paramJson و originUrls بدون تغییر بقیه
+    const data = { ...statusResp.data.data };
+    delete data.paramJson;
+    if (data.response) delete data.response.originUrls;
+
+    res.status(200).json({ ...statusResp.data, data });
   } catch (err) {
     console.error('❌ Reframe status error:', err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });

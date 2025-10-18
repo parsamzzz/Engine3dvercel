@@ -163,6 +163,11 @@ router.get('/record-info/:taskId', async (req, res) => {
       delete data.data.paramJson;
     }
 
+    // حذف originUrls از response در صورت وجود
+    if (data?.data?.response?.originUrls) {
+      delete data.data.response.originUrls;
+    }
+
     // برگرداندن پاسخ اصلاح شده
     res.status(200).json(data);
 
@@ -171,6 +176,7 @@ router.get('/record-info/:taskId', async (req, res) => {
     res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
   }
 });
+
 
 /* دریافت ویدیوی 1080P (فقط برای 16:9 و بدون fallback) با retry ساده */
 router.get('/get-1080p-video/:taskId', async (req, res) => {
