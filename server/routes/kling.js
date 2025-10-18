@@ -85,7 +85,6 @@ router.post(
       const input = {};
 
       switch (model) {
-        // مدل‌های قدیمی 2.1
         case 'kling/v2-1-master-image-to-video':
         case 'kling/v2-1-standard':
           if (!prompt || !image_url)
@@ -109,7 +108,6 @@ router.post(
           if (tail_image_url) input.tail_image_url = tail_image_url;
           break;
 
-        // مدل‌های جدید 2.5
         case 'kling/v2-5-turbo-image-to-video-pro':
           if (!prompt || !image_url)
             return res.status(400).json({ error: '❌ prompt و image_url الزامی است.' });
@@ -127,7 +125,6 @@ router.post(
           return res.status(400).json({ error: '❌ مدل نامعتبر است.' });
       }
 
-      // 🔹 اضافه کردن پارامترهای اختیاری به صورت یکنواخت
       if (duration) input.duration = duration.toString();
       if (aspect_ratio) input.aspect_ratio = aspect_ratio;
       if (negative_prompt) input.negative_prompt = negative_prompt;
@@ -148,6 +145,13 @@ router.post(
           'Content-Type': 'application/json'
         }
       });
+
+      // 🔔 لاگ Task ساخته شده
+      if (taskRes.data.code === 200 && taskRes.data.data?.taskId) {
+        console.log(`🎉 Task موفق: model=${model}, taskId=${taskRes.data.data.taskId}`);
+      } else {
+        console.warn(`⚠️ Task شکست خورده: model=${model}`, taskRes.data);
+      }
 
       res.json(taskRes.data);
     } catch (err) {
@@ -171,9 +175,13 @@ router.get('/recordInfo', async (req, res) => {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
-    // ✅ حذف فیلد param در پاسخ قبل از ارسال به کلاینت
     const cleanData = { ...response.data };
     if (cleanData?.data?.param) delete cleanData.data.param;
+
+    // 🔔 لاگ وضعیت Task موفق
+    if (cleanData.data?.state === 'success') {
+      console.log(`🎉 Task ${taskId} با موفقیت کامل شد.`);
+    }
 
     res.json(cleanData);
   } catch (err) {

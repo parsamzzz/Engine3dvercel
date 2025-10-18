@@ -139,7 +139,13 @@ router.post(
       const returnedTaskId = genResp.data?.data?.taskId;
       if (!returnedTaskId) throw new Error("❌ Task ID از پاسخ دریافت نشد.");
 
-      // ✅ فقط taskId در پاسخ، upload حذف شد
+      // 🔔 لاگ Task ساخته شده
+      if (genResp.data.code === 200) {
+        console.log(`🎉 Task موفق: ${service.toUpperCase()}, taskId: ${returnedTaskId}`);
+      } else {
+        console.warn(`⚠️ Task شکست خورده: ${service.toUpperCase()}, پاسخ سرور:`, genResp.data);
+      }
+
       res.status(200).json({
         success: true,
         task: { taskId: returnedTaskId },
@@ -177,6 +183,11 @@ router.get("/status/:service/:taskId", async (req, res) => {
     if (cleanData.data?.data) {
       delete cleanData.data.data.generateParam;
       if (cleanData.data.data.videoInfo) delete cleanData.data.data.videoInfo;
+    }
+
+    // 🔔 لاگ موفقیت وضعیت Task
+    if (cleanData.data?.state === "success") {
+      console.log(`🎉 Task ${taskId} (${service.toUpperCase()}) با موفقیت کامل شد.`);
     }
 
     res.status(200).json({ success: true, service, taskId, data: cleanData });

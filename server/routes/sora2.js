@@ -161,6 +161,11 @@ router.get('/recordInfo/:taskId', async (req, res) => {
       delete cleanData.data.param;
     }
 
+    // 🔔 لاگ وضعیت موفق Task
+    if (cleanData?.data?.state === 'success') {
+      console.log(`🎉 Task ${taskId} با موفقیت کامل شد. ResultUrls:`, cleanData.data.resultJson);
+    }
+
     res.status(200).json(cleanData);
   } catch (err) {
     console.error('[RecordInfo Error]:', err.response?.data || err.message);

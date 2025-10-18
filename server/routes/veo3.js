@@ -13,6 +13,9 @@ const GET_1080P_URL = 'https://api.kie.ai/api/v1/veo/get-1080p-video';
 /* دریافت فایل در حافظه */
 const upload = multer({ storage: multer.memoryStorage() });
 
+// نگهداری آخرین وضعیت Task
+const lastStatusMap = new Map();
+
 /* تست سلامت API */
 router.get('/', (req, res) => {
   res.send('✅ Veo3 API route is working.');
@@ -23,7 +26,6 @@ function determineGenerationType(model, imageUrls, aspectRatio) {
   if (!imageUrls || imageUrls.length === 0) return 'TEXT_2_VIDEO';
 
   if (model === 'veo3_fast') {
-    // REFERENCE_2_VIDEO فقط برای 1 تا 3 تصویر و aspectRatio 16:9
     if (imageUrls.length >= 1 && imageUrls.length <= 3) {
       if (imageUrls.length === 2) return 'FIRST_AND_LAST_FRAMES_2_VIDEO';
       if (aspectRatio !== '16:9') {
@@ -60,11 +62,9 @@ router.post('/generate', upload.array('images', 3), async (req, res) => {
       return res.status(400).json({ error: '❌ فیلد prompt یا حداقل یک تصویر الزامی است.' });
     }
 
-    /* آپلود تصاویر در صورت وجود */
     let imageUrls = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        // بررسی MIME type اختیاری: فقط jpg/png
         if (!['image/jpeg','image/png'].includes(file.mimetype)) {
           return res.status(400).json({ error: '❌ فقط فرمت‌های JPG و PNG مجاز است.' });
         }
@@ -88,7 +88,6 @@ router.post('/generate', upload.array('images', 3), async (req, res) => {
       }
     }
 
-    /* بررسی seeds */
     let seedValue;
     if (seeds) {
       const parsedSeed = parseInt(seeds);
@@ -98,7 +97,6 @@ router.post('/generate', upload.array('images', 3), async (req, res) => {
       seedValue = parsedSeed;
     }
 
-    /* تعیین generationType */
     let generationType;
     try {
       generationType = determineGenerationType(model, imageUrls, aspectRatio);
@@ -106,7 +104,6 @@ router.post('/generate', upload.array('images', 3), async (req, res) => {
       return res.status(400).json({ error: `❌ ${err.message}` });
     }
 
-    /* آماده سازی body درخواست Veo3 */
     const body = {
       prompt,
       model,
@@ -114,13 +111,11 @@ router.post('/generate', upload.array('images', 3), async (req, res) => {
       generationType,
       enableTranslation: Boolean(enableTranslation)
     };
-
     if (imageUrls.length) body.imageUrls = imageUrls;
     if (seedValue) body.seeds = seedValue;
     if (watermark) body.watermark = watermark;
     if (callBackUrl) body.callBackUrl = callBackUrl;
 
-    /* ارسال درخواست تولید ویدیو */
     const taskResp = await axios.post(GENERATE_URL, body, {
       headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' }
     });
@@ -128,6 +123,9 @@ router.post('/generate', upload.array('images', 3), async (req, res) => {
     if (taskResp.data.code !== 200 || !taskResp.data.data?.taskId) {
       return res.status(500).json({ error: '❌ Task ایجاد نشد.', rawResponse: taskResp.data });
     }
+
+    // لاگ Task Created
+    console.log(`✅ [Veo3] Task Created | model: ${model} | taskId: ${taskResp.data.data.taskId}`);
 
     res.status(200).json({
       taskId: taskResp.data.data.taskId,
@@ -150,25 +148,25 @@ router.get('/record-info/:taskId', async (req, res) => {
       return res.status(400).json({ error: '❌ پارامتر taskId الزامی است.' });
     }
 
-    // درخواست وضعیت Task از API اصلی
     const statusResp = await axios.get(`${RECORD_INFO_URL}?taskId=${taskId}`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
-    // داده اصلی
     const data = statusResp.data;
 
-    // حذف paramJson از داده در صورت وجود
+    // لاگ موفقیت فقط یک بار
+    if (data?.data?.successFlag === 1 && lastStatusMap.get(taskId) !== 'success') {
+      console.log(`✅ [Veo3] Task Completed Successfully | taskId: ${taskId}`);
+      lastStatusMap.set(taskId, 'success');
+    }
+
     if (data?.data?.paramJson) {
       delete data.data.paramJson;
     }
-
-    // حذف originUrls از response در صورت وجود
     if (data?.data?.response?.originUrls) {
       delete data.data.response.originUrls;
     }
 
-    // برگرداندن پاسخ اصلاح شده
     res.status(200).json(data);
 
   } catch (err) {
@@ -177,8 +175,7 @@ router.get('/record-info/:taskId', async (req, res) => {
   }
 });
 
-
-/* دریافت ویدیوی 1080P (فقط برای 16:9 و بدون fallback) با retry ساده */
+/* دریافت ویدیوی 1080P */
 router.get('/get-1080p-video/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
@@ -193,7 +190,6 @@ router.get('/get-1080p-video/:taskId', async (req, res) => {
     if (record.fallbackFlag) return res.status(400).json({ error: '❌ ویدیو fallback قابل دریافت 1080P نیست.' });
     if (record.aspectRatio !== '16:9') return res.status(400).json({ error: '❌ فقط ویدیوهای 16:9 از 1080P پشتیبانی می‌کنند.' });
 
-    // retry ساده
     let videoResp;
     for (let i = 0; i < 3; i++) {
       try {
@@ -202,13 +198,14 @@ router.get('/get-1080p-video/:taskId', async (req, res) => {
         });
         break;
       } catch (e) {
-        await new Promise(r => setTimeout(r, 2000)); // 2 ثانیه انتظار
+        await new Promise(r => setTimeout(r, 2000));
       }
     }
 
     if (!videoResp) return res.status(500).json({ error: '❌ ویدیوی 1080P آماده نیست.' });
 
     res.status(200).json(videoResp.data);
+
   } catch (err) {
     console.error('❌ 1080P error:', err.response?.data || err.message);
     res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });

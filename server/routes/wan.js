@@ -13,6 +13,9 @@ const RECORD_INFO_URL = 'https://api.kie.ai/api/v1/jobs/recordInfo';
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// نگهداری آخرین وضعیت هر taskId
+const lastStatusMap = new Map();
+
 // --- مسیر تست ---
 router.get('/', (req, res) => {
   res.send('✅ WAN AI API route is working.');
@@ -69,57 +72,45 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
 
     // --- ساخت input بر اساس مدل ---
     switch (model) {
-      // === Text-to-Video Turbo ===
       case 'wan/2-2-a14b-text-to-video-turbo':
         if (!prompt) return res.status(400).json({ error: '❌ prompt الزامی است.' });
         input.prompt = prompt;
-
         if (resolution && ['480p','580p','720p'].includes(resolution)) input.resolution = resolution;
         if (aspect_ratio && ['16:9','9:16','1:1'].includes(aspect_ratio)) input.aspect_ratio = aspect_ratio;
-
         if (enable_prompt_expansion != null) input.enable_prompt_expansion = Boolean(enable_prompt_expansion);
         if (seed != null) input.seed = Number(seed);
         if (acceleration && ['none','regular'].includes(acceleration)) input.acceleration = acceleration;
         break;
 
-      // === Text-to-Video 2.5 ===
       case 'wan/2-5-text-to-video':
         if (!prompt) return res.status(400).json({ error: '❌ prompt الزامی است.' });
         input.prompt = prompt;
-
         if (resolution && ['720p','1080p'].includes(resolution)) input.resolution = resolution;
         if (aspect_ratio && ['16:9','9:16','1:1'].includes(aspect_ratio)) input.aspect_ratio = aspect_ratio;
         if (negative_prompt) input.negative_prompt = negative_prompt;
-
         if (enable_prompt_expansion != null) input.enable_prompt_expansion = Boolean(enable_prompt_expansion);
         if (seed != null) input.seed = Number(seed);
         break;
 
-      // === Image-to-Video Turbo ===
       case 'wan/2-2-a14b-image-to-video-turbo':
         if (!prompt || !image_url) return res.status(400).json({ error: '❌ prompt و image_url الزامی است.' });
         input.prompt = prompt;
         input.image_url = image_url;
-
         if (resolution && ['480p','580p','720p'].includes(resolution)) input.resolution = resolution;
         input.aspect_ratio = aspect_ratio || 'auto';
-
         if (enable_prompt_expansion != null) input.enable_prompt_expansion = Boolean(enable_prompt_expansion);
         if (seed != null) input.seed = Number(seed);
         if (acceleration && ['none','regular'].includes(acceleration)) input.acceleration = acceleration;
         break;
 
-      // === Image-to-Video 2.5 ===
       case 'wan/2-5-image-to-video':
         if (!prompt || !image_url) return res.status(400).json({ error: '❌ prompt و image_url الزامی است.' });
         input.prompt = prompt;
         input.image_url = image_url;
-
         if (duration && ['5','10'].includes(duration)) input.duration = duration;
         if (resolution && ['720p','1080p'].includes(resolution)) input.resolution = resolution;
         input.aspect_ratio = aspect_ratio || 'auto';
         if (negative_prompt) input.negative_prompt = negative_prompt;
-
         if (enable_prompt_expansion != null) input.enable_prompt_expansion = Boolean(enable_prompt_expansion);
         if (seed != null) input.seed = Number(seed);
         break;
@@ -136,6 +127,10 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
     const taskResp = await axios.post(CREATE_TASK_URL, body, {
       headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' }
     });
+
+    if (taskResp.data.code === 200 && taskResp.data.data?.taskId) {
+      console.log(`✅ [WAN] Task Created | model: ${model} | taskId: ${taskResp.data.data.taskId}`);
+    }
 
     if (taskResp.data.code !== 200 || !taskResp.data.data?.taskId)
       return res.status(500).json({ error: '❌ Task ایجاد نشد.', details: taskResp.data });
@@ -161,14 +156,21 @@ router.get('/recordInfo/:taskId', async (req, res) => {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
+    const currentStatus = statusResp.data.data?.state || 'Unknown';
+
+    // فقط وقتی وضعیت به "success" رسید و قبلاً لاگ نشده، لاگ می‌کنیم
+    if (currentStatus === 'success' && lastStatusMap.get(taskId) !== 'success') {
+      console.log(`✅ [WAN] Task Completed Successfully | taskId: ${taskId}`);
+    }
+
+    // به‌روزرسانی آخرین وضعیت
+    lastStatusMap.set(taskId, currentStatus);
+
     let parsedResults = null;
     if (statusResp.data?.data?.resultJson) {
       try {
         parsedResults = JSON.parse(statusResp.data.data.resultJson);
-
-        // حذف param از parsedResults
         if (parsedResults.param) delete parsedResults.param;
-
       } catch {
         parsedResults = null;
       }
@@ -180,6 +182,5 @@ router.get('/recordInfo/:taskId', async (req, res) => {
     res.status(500).json({ error: '❌ خطا در دریافت وضعیت Task.' });
   }
 });
-
 
 export default router;

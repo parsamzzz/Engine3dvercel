@@ -152,6 +152,11 @@ router.post(
         }
       });
 
+      // 🔔 لاگ Task موفق
+      if (response.data.code === 200 && response.data.data?.taskId) {
+        console.log(`🎉 Task ساخته شد. taskId: ${response.data.data.taskId}, ResultJson: ${response.data.data.resultJson || 'N/A'}`);
+      }
+
       res.json(response.data);
     } catch (err) {
       console.error('❌ خطا در ایجاد Task:', err.response?.data || err.message);
@@ -163,7 +168,7 @@ router.post(
   }
 );
 
-// 🕓 گرفتن وضعیت Task بدون فیلد param
+// 🕓 گرفتن وضعیت Task بدون فیلد param و اضافه کردن لاگ موفقیت
 router.get('/recordInfo', async (req, res) => {
   try {
     const { taskId } = req.query;
@@ -177,6 +182,11 @@ router.get('/recordInfo', async (req, res) => {
     // حذف فیلد param از داده برگشتی
     const data = { ...response.data.data };
     if ('param' in data) delete data.param;
+
+    // 🔔 لاگ وضعیت موفق Task
+    if (data?.state === 'success') {
+      console.log(`🎉 Task ${taskId} با موفقیت کامل شد. ResultUrls:`, data.resultJson);
+    }
 
     res.json({
       code: response.data.code,
