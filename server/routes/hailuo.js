@@ -148,8 +148,7 @@ router.post('/createTask', upload.fields([
       success: true,
       message: 'تسک با موفقیت ایجاد شد',
       taskId: result.data.taskId,
-      uploadImage: image_url || null,
-      uploadEndImage: end_image_url || null
+  
     });
 
   } catch (err) {
