@@ -12,10 +12,9 @@ const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
 const CREATE_TASK_URL = 'https://kieai.redpandaai.co/api/v1/jobs/createTask';
 const RECORD_INFO_URL = 'https://kieai.redpandaai.co/api/v1/jobs/recordInfo';
 
-/* 📦 Multer برای آپلود فایل در حافظه */
 const upload = multer({ storage: multer.memoryStorage() });
 
-/* 🔹 آپلود فایل به KIE.AI */
+/* 🔼 آپلود فایل */
 const uploadFile = async (file) => {
   if (!file) return null;
 
@@ -88,6 +87,8 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
       case 'hailuo/02-text-to-video-standard':
         if (duration && !['6','10'].includes(duration))
           return res.status(400).json({ error: 'duration باید "6" یا "10" باشد.' });
+        if (resolution && !['512P','768P'].includes(resolution))
+          return res.status(400).json({ error: 'resolution باید "512P" یا "768P" باشد.' });
         if (prompt_optimizer !== undefined) input.prompt_optimizer = parseBool(prompt_optimizer);
         if (duration) input.duration = duration;
         if (resolution) input.resolution = resolution;
@@ -115,11 +116,6 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
 
       default:
         return res.status(400).json({ error: 'مدل ارسالی معتبر نیست.' });
-    }
-
-    /* محدودیت‌های رزولوشن 1080P */
-    if (model.includes('pro') && resolution === '1080P' && duration && duration !== '6') {
-      return res.status(400).json({ error: 'مدت زمان برای رزولوشن 1080P فقط 6 ثانیه مجاز است.' });
     }
 
     /* ساخت بدنه نهایی */
