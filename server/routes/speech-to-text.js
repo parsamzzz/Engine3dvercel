@@ -11,7 +11,6 @@ const upload = multer({ dest: 'tmp/' });
 // 🔑 همه کلیدها
 // =====================
 const API_KEYS = [
-  "AIzaSyDgX7F-P_9hjuLMDOIhNQffyAf_0Tp4gPU",
   "AIzaSyAM6ZzH-ngfxY1wKTnoHVMyD2kYOHLd1i4",
   "AIzaSyBRLO9BrEuF5Psn9HzVIgM5t7r4BhfytW0",
   "AIzaSyCvPUJ7zLFWJIzVw9UD3voAY9FJXTXAcD4",
