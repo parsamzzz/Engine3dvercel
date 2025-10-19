@@ -9,8 +9,8 @@ const router = express.Router();
 /* 🔑 تنظیمات ثابت */
 const API_KEY = process.env.KIE_API_KEY || 'dbd18fd3191266b86bbf18adb81d67d4';
 const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
-const CREATE_TASK_URL = 'https://kieai.redpandaai.co/api/v1/jobs/createTask';
-const RECORD_INFO_URL = 'https://kieai.redpandaai.co/api/v1/jobs/recordInfo';
+const CREATE_TASK_URL = 'https://api.kie.ai/api/v1/jobs/createTask';
+const RECORD_INFO_URL = 'https://api.kie.ai/api/v1/jobs/recordInfo';
 
 const upload = multer({ storage: multer.memoryStorage() });
 
