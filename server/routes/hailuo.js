@@ -168,12 +168,17 @@ router.get('/recordInfo/:taskId', async (req, res) => {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
-    res.status(200).json(resp.data);
+    // حذف param از data قبل از ارسال به کلاینت
+    const sanitizedData = { ...resp.data };
+    if (sanitizedData.data?.param) delete sanitizedData.data.param;
+
+    res.status(200).json(sanitizedData);
 
   } catch (err) {
     console.error('RecordInfo Error:', err.response?.data || err.message, err.response?.status);
     res.status(err.response?.status || 500).json({ error: 'خطا در دریافت وضعیت تسک.' });
   }
 });
+
 
 export default router;
