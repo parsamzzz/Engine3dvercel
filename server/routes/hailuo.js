@@ -52,11 +52,14 @@ const uploadFile = async (file) => {
 router.get('/', (req, res) => res.send('✅ Hailuo API active'));
 
 /* 📤 ایجاد تسک */
-router.post('/createTask', upload.single('image'), async (req, res) => {
+router.post('/createTask', upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'end_image_url', maxCount: 1 }
+]), async (req, res) => {
   try {
-    let { model, prompt, duration, resolution, prompt_optimizer, callBackUrl, end_image_url } = req.body;
+    let { model, prompt, duration, resolution, prompt_optimizer, callBackUrl } = req.body;
 
-    /* trim کردن ورودی‌ها */
+    // trim ورودی‌ها
     prompt = prompt?.trim();
     duration = duration ? String(duration).trim() : undefined;
     resolution = resolution ? String(resolution).toUpperCase().trim() : undefined;
@@ -65,20 +68,27 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
     if (!prompt) return res.status(400).json({ error: 'prompt الزامی است.' });
     if (prompt.length > 1500) return res.status(400).json({ error: 'طول prompt نباید بیش از 1500 کاراکتر باشد.' });
 
-    /* آپلود فایل در صورت ارسال */
+    // فایل‌ها
+    const imageFile = req.files?.image?.[0] || null;
+    const endImageFile = req.files?.end_image_url?.[0] || null;
+
     let image_url = null;
-    if (req.file) {
-      try {
-        image_url = await uploadFile(req.file);
-      } catch (err) {
-        return res.status(400).json({ error: err.message });
-      }
+    let end_image_url = null;
+
+    if (imageFile) {
+      try { image_url = await uploadFile(imageFile); }
+      catch (err) { return res.status(400).json({ error: err.message }); }
     }
 
-    /* ساخت input بر اساس مدل */
+    if (endImageFile) {
+      try { end_image_url = await uploadFile(endImageFile); }
+      catch (err) { return res.status(400).json({ error: err.message }); }
+    }
+
     const parseBool = (v) => v === 'true' || v === true;
     const input = { prompt };
 
+    // مدیریت مدل‌ها
     switch (model) {
       case 'hailuo/02-text-to-video-pro':
         if (prompt_optimizer !== undefined) input.prompt_optimizer = parseBool(prompt_optimizer);
@@ -95,12 +105,6 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
         break;
 
       case 'hailuo/02-image-to-video-pro':
-        if (!image_url) return res.status(400).json({ error: 'image_url الزامی است.' });
-        input.image_url = image_url;
-        if (end_image_url) input.end_image_url = end_image_url;
-        if (prompt_optimizer !== undefined) input.prompt_optimizer = parseBool(prompt_optimizer);
-        break;
-
       case 'hailuo/02-image-to-video-standard':
         if (!image_url) return res.status(400).json({ error: 'image_url الزامی است.' });
         input.image_url = image_url;
@@ -118,14 +122,14 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
         return res.status(400).json({ error: 'مدل ارسالی معتبر نیست.' });
     }
 
-    /* ساخت بدنه نهایی */
+    // بدنه نهایی
     const body = { model, input };
     if (callBackUrl) {
       try { new URL(callBackUrl); body.callBackUrl = callBackUrl; }
       catch { return res.status(400).json({ error: 'callBackUrl معتبر نیست.' }); }
     }
 
-    /* ارسال به API */
+    // ارسال به API
     let response;
     try {
       response = await axios.post(CREATE_TASK_URL, body, {
@@ -137,15 +141,15 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
     }
 
     const result = response.data;
-    if (result.code !== 200 || !result.data?.taskId) {
+    if (result.code !== 200 || !result.data?.taskId)
       return res.status(500).json({ error: 'ایجاد تسک ناموفق بود.', raw: result });
-    }
 
     res.status(200).json({
       success: true,
       message: 'تسک با موفقیت ایجاد شد',
       taskId: result.data.taskId,
-      uploadImage: image_url || null
+      uploadImage: image_url || null,
+      uploadEndImage: end_image_url || null
     });
 
   } catch (err) {
