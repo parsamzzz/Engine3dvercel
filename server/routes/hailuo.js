@@ -20,8 +20,10 @@ const uploadFile = async (file) => {
   if (!file) return null;
 
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  if (!allowedTypes.includes(file.mimetype)) throw new Error('فرمت تصویر باید jpeg/png/webp باشد.');
-  if (file.size > 10 * 1024 * 1024) throw new Error('حجم تصویر باید کمتر از 10MB باشد.');
+  if (!allowedTypes.includes(file.mimetype))
+    throw new Error('فرمت تصویر باید jpeg/png/webp باشد.');
+  if (file.size > 10 * 1024 * 1024)
+    throw new Error('حجم تصویر باید کمتر از 10MB باشد.');
 
   const formData = new FormData();
   formData.append('file', file.buffer, { filename: file.originalname });
@@ -30,13 +32,20 @@ const uploadFile = async (file) => {
   const res = await fetch(FILE_UPLOAD_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${API_KEY}`, ...formData.getHeaders() },
-    body: formData
+    body: formData,
   });
 
-  if (!res.ok) throw new Error(`آپلود تصویر ناموفق بود. Status: ${res.status}`);
+  if (!res.ok)
+    throw new Error(`آپلود تصویر ناموفق بود. Status: ${res.status}`);
 
-  const data = await res.json();
-  if (data.code !== 200 || !data.data?.downloadUrl) throw new Error('پاسخ نامعتبر از سرور آپلود فایل.');
+  const data = await res.json().catch(async () => {
+    const text = await res.text();
+    throw new Error('پاسخ JSON معتبر نیست: ' + text);
+  });
+
+  if (data.code !== 200 || !data.data?.downloadUrl)
+    throw new Error('پاسخ نامعتبر از سرور آپلود فایل.');
+
   return data.data.downloadUrl;
 };
 
@@ -46,21 +55,28 @@ router.get('/', (req, res) => res.send('✅ Hailuo API active'));
 /* 📤 ایجاد تسک */
 router.post('/createTask', upload.single('image'), async (req, res) => {
   try {
-    const { model, prompt, duration, resolution, prompt_optimizer, callBackUrl, end_image_url } = req.body;
+    let { model, prompt, duration, resolution, prompt_optimizer, callBackUrl, end_image_url } = req.body;
 
-    /* 1️⃣ بررسی ورودی‌های ضروری */
+    /* trim کردن ورودی‌ها */
+    prompt = prompt?.trim();
+    duration = duration ? String(duration).trim() : undefined;
+    resolution = resolution ? String(resolution).toUpperCase().trim() : undefined;
+
     if (!model) return res.status(400).json({ error: 'model الزامی است.' });
     if (!prompt) return res.status(400).json({ error: 'prompt الزامی است.' });
     if (prompt.length > 1500) return res.status(400).json({ error: 'طول prompt نباید بیش از 1500 کاراکتر باشد.' });
 
-    /* 2️⃣ آپلود فایل در صورت ارسال */
+    /* آپلود فایل در صورت ارسال */
     let image_url = null;
     if (req.file) {
-      try { image_url = await uploadFile(req.file); } 
-      catch (err) { return res.status(400).json({ error: err.message }); }
+      try {
+        image_url = await uploadFile(req.file);
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
     }
 
-    /* 3️⃣ ساخت input بر اساس مدل */
+    /* ساخت input بر اساس مدل */
     const parseBool = (v) => v === 'true' || v === true;
     const input = { prompt };
 
@@ -70,10 +86,11 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
         break;
 
       case 'hailuo/02-text-to-video-standard':
-        if (duration && !['6','10'].includes(duration)) 
+        if (duration && !['6','10'].includes(duration))
           return res.status(400).json({ error: 'duration باید "6" یا "10" باشد.' });
         if (prompt_optimizer !== undefined) input.prompt_optimizer = parseBool(prompt_optimizer);
         if (duration) input.duration = duration;
+        if (resolution) input.resolution = resolution;
         break;
 
       case 'hailuo/02-image-to-video-pro':
@@ -100,33 +117,39 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
         return res.status(400).json({ error: 'مدل ارسالی معتبر نیست.' });
     }
 
-    /* 4️⃣ محدودیت‌های اضافی برای رزولوشن 1080P */
+    /* محدودیت‌های رزولوشن 1080P */
     if (model.includes('pro') && resolution === '1080P' && duration && duration !== '6') {
       return res.status(400).json({ error: 'مدت زمان برای رزولوشن 1080P فقط 6 ثانیه مجاز است.' });
     }
 
-    /* 5️⃣ ساخت بدنه نهایی */
+    /* ساخت بدنه نهایی */
     const body = { model, input };
     if (callBackUrl) {
-      try { new URL(callBackUrl); body.callBackUrl = callBackUrl; } 
+      try { new URL(callBackUrl); body.callBackUrl = callBackUrl; }
       catch { return res.status(400).json({ error: 'callBackUrl معتبر نیست.' }); }
     }
 
-    /* 🚀 ارسال به API */
-    const response = await axios.post(CREATE_TASK_URL, body, {
-      headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' }
-    });
+    /* ارسال به API */
+    let response;
+    try {
+      response = await axios.post(CREATE_TASK_URL, body, {
+        headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' }
+      });
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message;
+      return res.status(err.response?.status || 500).json({ error: 'خطا در ایجاد تسک: ' + msg });
+    }
 
     const result = response.data;
     if (result.code !== 200 || !result.data?.taskId) {
       return res.status(500).json({ error: 'ایجاد تسک ناموفق بود.', raw: result });
     }
 
-    res.status(200).json({ 
-      success: true, 
-      message: 'تسک با موفقیت ایجاد شد', 
-      taskId: result.data.taskId, 
-      uploadImage: image_url || null 
+    res.status(200).json({
+      success: true,
+      message: 'تسک با موفقیت ایجاد شد',
+      taskId: result.data.taskId,
+      uploadImage: image_url || null
     });
 
   } catch (err) {
