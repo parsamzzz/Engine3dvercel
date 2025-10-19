@@ -157,7 +157,6 @@ router.post('/createTask', upload.fields([
   }
 });
 
-/* 📊 بررسی وضعیت تسک */
 router.get('/recordInfo/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
