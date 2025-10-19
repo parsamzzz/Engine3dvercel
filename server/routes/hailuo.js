@@ -12,70 +12,55 @@ const FILE_UPLOAD_URL = 'https://kieai.redpandaai.co/api/file-stream-upload';
 const CREATE_TASK_URL = 'https://kieai.redpandaai.co/api/v1/jobs/createTask';
 const RECORD_INFO_URL = 'https://kieai.redpandaai.co/api/v1/jobs/recordInfo';
 
-/* 📦 تنظیم Multer برای آپلود فایل در حافظه */
+/* 📦 Multer برای آپلود فایل در حافظه */
 const upload = multer({ storage: multer.memoryStorage() });
 
-/* 🔹 تابع آپلود فایل به KIE.AI */
+/* 🔹 آپلود فایل به KIE.AI */
 const uploadFile = async (file) => {
   if (!file) return null;
 
-  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-  if (!allowed.includes(file.mimetype)) {
-    throw new Error('❌ فرمت تصویر مجاز نیست (jpeg/png/webp).');
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    throw new Error('❌ حجم تصویر باید کمتر از 10MB باشد.');
-  }
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowedTypes.includes(file.mimetype)) throw new Error('فرمت تصویر باید jpeg/png/webp باشد.');
+  if (file.size > 10 * 1024 * 1024) throw new Error('حجم تصویر باید کمتر از 10MB باشد.');
 
   const formData = new FormData();
-  formData.append('file', file.buffer, file.originalname);
+  formData.append('file', file.buffer, { filename: file.originalname });
   formData.append('uploadPath', 'hailuo/uploads');
 
-  const uploadResp = await fetch(FILE_UPLOAD_URL, {
+  const res = await fetch(FILE_UPLOAD_URL, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${API_KEY}`,
-      ...formData.getHeaders()
-    },
+    headers: { Authorization: `Bearer ${API_KEY}`, ...formData.getHeaders() },
     body: formData
   });
 
-  if (!uploadResp.ok) {
-    throw new Error(`❌ آپلود تصویر شکست خورد. وضعیت: ${uploadResp.status}`);
-  }
+  if (!res.ok) throw new Error(`آپلود تصویر ناموفق بود. Status: ${res.status}`);
 
-  const uploadData = await uploadResp.json();
-  if (uploadData.code !== 200 || !uploadData.data?.downloadUrl) {
-    throw new Error('❌ پاسخ نامعتبر از سرور آپلود فایل.');
-  }
-
-  return uploadData.data.downloadUrl;
+  const data = await res.json();
+  if (data.code !== 200 || !data.data?.downloadUrl) throw new Error('پاسخ نامعتبر از سرور آپلود فایل.');
+  return data.data.downloadUrl;
 };
 
 /* 🟢 تست سرور */
-router.get('/', (req, res) => res.send('✅ Hailuo API route active'));
+router.get('/', (req, res) => res.send('✅ Hailuo API active'));
 
 /* 📤 ایجاد تسک */
 router.post('/createTask', upload.single('image'), async (req, res) => {
   try {
     const { model, prompt, duration, resolution, prompt_optimizer, callBackUrl, end_image_url } = req.body;
 
-    /* 1️⃣ بررسی ورودی‌های پایه */
-    if (!model) return res.status(400).json({ error: '❌ model الزامی است.' });
-    if (!prompt) return res.status(400).json({ error: '❌ prompt الزامی است.' });
-    if (prompt.length > 1500) return res.status(400).json({ error: '❌ طول prompt نباید بیش از 1500 کاراکتر باشد.' });
+    /* 1️⃣ بررسی ورودی‌های ضروری */
+    if (!model) return res.status(400).json({ error: 'model الزامی است.' });
+    if (!prompt) return res.status(400).json({ error: 'prompt الزامی است.' });
+    if (prompt.length > 1500) return res.status(400).json({ error: 'طول prompt نباید بیش از 1500 کاراکتر باشد.' });
 
-    /* 2️⃣ آپلود فایل در صورت وجود */
+    /* 2️⃣ آپلود فایل در صورت ارسال */
     let image_url = null;
     if (req.file) {
-      try {
-        image_url = await uploadFile(req.file);
-      } catch (err) {
-        return res.status(400).json({ error: err.message });
-      }
+      try { image_url = await uploadFile(req.file); } 
+      catch (err) { return res.status(400).json({ error: err.message }); }
     }
 
-    /* 3️⃣ بررسی صحت پارامترها بر اساس مدل */
+    /* 3️⃣ ساخت input بر اساس مدل */
     const parseBool = (v) => v === 'true' || v === true;
     const input = { prompt };
 
@@ -85,72 +70,68 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
         break;
 
       case 'hailuo/02-text-to-video-standard':
-        if (duration && !['6', '10'].includes(duration)) {
-          return res.status(400).json({ error: '❌ مقدار duration فقط می‌تواند "6" یا "10" باشد.' });
-        }
+        if (duration && !['6','10'].includes(duration)) 
+          return res.status(400).json({ error: 'duration باید "6" یا "10" باشد.' });
         if (prompt_optimizer !== undefined) input.prompt_optimizer = parseBool(prompt_optimizer);
-        if (duration) input.duration = duration; // رشته
+        if (duration) input.duration = duration;
         break;
 
       case 'hailuo/02-image-to-video-pro':
-        if (!image_url) return res.status(400).json({ error: '❌ تصویر الزامی است.' });
+        if (!image_url) return res.status(400).json({ error: 'image_url الزامی است.' });
         input.image_url = image_url;
         if (end_image_url) input.end_image_url = end_image_url;
         if (prompt_optimizer !== undefined) input.prompt_optimizer = parseBool(prompt_optimizer);
         break;
 
       case 'hailuo/02-image-to-video-standard':
-        if (!image_url) return res.status(400).json({ error: '❌ تصویر الزامی است.' });
+        if (!image_url) return res.status(400).json({ error: 'image_url الزامی است.' });
         input.image_url = image_url;
         if (end_image_url) input.end_image_url = end_image_url;
-
-        if (duration && !['6', '10'].includes(duration)) {
-          return res.status(400).json({ error: '❌ مقدار duration فقط می‌تواند "6" یا "10" باشد.' });
-        }
-        if (resolution && !['512P', '768P'].includes(resolution)) {
-          return res.status(400).json({ error: '❌ مقدار resolution فقط می‌تواند "512P" یا "768P" باشد.' });
-        }
-
-        if (duration) input.duration = duration; // رشته
+        if (duration && !['6','10'].includes(duration))
+          return res.status(400).json({ error: 'duration باید "6" یا "10" باشد.' });
+        if (resolution && !['512P','768P'].includes(resolution))
+          return res.status(400).json({ error: 'resolution باید "512P" یا "768P" باشد.' });
+        if (duration) input.duration = duration;
         if (resolution) input.resolution = resolution;
         if (prompt_optimizer !== undefined) input.prompt_optimizer = parseBool(prompt_optimizer);
         break;
 
       default:
-        return res.status(400).json({ error: '❌ مدل ارسالی معتبر نیست.' });
+        return res.status(400).json({ error: 'مدل ارسالی معتبر نیست.' });
     }
 
-    /* 4️⃣ ساخت بدنه نهایی درخواست */
+    /* 4️⃣ محدودیت‌های اضافی برای رزولوشن 1080P */
+    if (model.includes('pro') && resolution === '1080P' && duration && duration !== '6') {
+      return res.status(400).json({ error: 'مدت زمان برای رزولوشن 1080P فقط 6 ثانیه مجاز است.' });
+    }
+
+    /* 5️⃣ ساخت بدنه نهایی */
     const body = { model, input };
-
     if (callBackUrl) {
-      try {
-        new URL(callBackUrl); // بررسی معتبر بودن URL
-        body.callBackUrl = callBackUrl;
-      } catch {
-        return res.status(400).json({ error: '❌ callBackUrl باید یک URL معتبر باشد.' });
-      }
+      try { new URL(callBackUrl); body.callBackUrl = callBackUrl; } 
+      catch { return res.status(400).json({ error: 'callBackUrl معتبر نیست.' }); }
     }
 
-    /* 🚀 ارسال به API اصلی */
+    /* 🚀 ارسال به API */
     const response = await axios.post(CREATE_TASK_URL, body, {
       headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' }
     });
 
     const result = response.data;
     if (result.code !== 200 || !result.data?.taskId) {
-      return res.status(500).json({ error: '❌ ایجاد تسک ناموفق بود.', rawResponse: result });
+      return res.status(500).json({ error: 'ایجاد تسک ناموفق بود.', raw: result });
     }
 
     res.status(200).json({ 
       success: true, 
-      message: '✅ تسک با موفقیت ایجاد شد', 
+      message: 'تسک با موفقیت ایجاد شد', 
       taskId: result.data.taskId, 
       uploadImage: image_url || null 
     });
+
   } catch (err) {
-    console.error('CreateTask Error:', err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: '❌ خطایی در ارتباط با سرویس رخ داد.' });
+    console.error('CreateTask Error:', err.response?.data || err.message, err.response?.status);
+    res.status(err.response?.status || 500).json({ error: 'خطا در ارتباط با سرویس.' });
   }
 });
 
@@ -158,16 +139,17 @@ router.post('/createTask', upload.single('image'), async (req, res) => {
 router.get('/recordInfo/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
-    if (!taskId) return res.status(400).json({ error: '❌ taskId الزامی است.' });
+    if (!taskId) return res.status(400).json({ error: 'taskId الزامی است.' });
 
     const resp = await axios.get(`${RECORD_INFO_URL}?taskId=${taskId}`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
     res.status(200).json(resp.data);
+
   } catch (err) {
-    console.error('RecordInfo Error:', err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({ error: '❌ خطایی در دریافت وضعیت تسک رخ داد.' });
+    console.error('RecordInfo Error:', err.response?.data || err.message, err.response?.status);
+    res.status(err.response?.status || 500).json({ error: 'خطا در دریافت وضعیت تسک.' });
   }
 });
 
