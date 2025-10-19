@@ -10,6 +10,7 @@ const upload = multer();
 // 🔑 همه کلیدها
 // =====================
 const API_KEYS = [
+  "AIzaSyBC6FvJXp_401hs7GKQU4N53J47xEFZABI",
   "AIzaSyBqKjF5kBVSrdAnqEPemYzIAUjxeF1C8ww",
   "AIzaSyBRaDzYy3ivS_wWD45PQYcPCGwhESle64I",
   "AIzaSyB8Jypz5MaY7hbrZr_T1KG2l02xmTZKAio",
