@@ -28,6 +28,8 @@ const uploadFile = async (file) => {
   formData.append('file', file.buffer, { filename: file.originalname });
   formData.append('uploadPath', 'hailuo/uploads');
 
+  console.log(`📤 شروع آپلود فایل: ${file.originalname}`);
+
   const res = await fetch(FILE_UPLOAD_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${API_KEY}`, ...formData.getHeaders() },
@@ -45,6 +47,7 @@ const uploadFile = async (file) => {
   if (data.code !== 200 || !data.data?.downloadUrl)
     throw new Error('پاسخ نامعتبر از سرور آپلود فایل.');
 
+  console.log(`✅ فایل ${file.originalname} با موفقیت آپلود شد → ${data.data.downloadUrl}`);
   return data.data.downloadUrl;
 };
 
@@ -57,6 +60,8 @@ router.post('/createTask', upload.fields([
   { name: 'end_image_url', maxCount: 1 }
 ]), async (req, res) => {
   try {
+    console.log('🚀 درخواست جدید به /createTask دریافت شد');
+
     let { model, prompt, duration, resolution, prompt_optimizer, callBackUrl } = req.body;
 
     // trim ورودی‌ها
@@ -76,13 +81,21 @@ router.post('/createTask', upload.fields([
     let end_image_url = null;
 
     if (imageFile) {
-      try { image_url = await uploadFile(imageFile); }
-      catch (err) { return res.status(400).json({ error: err.message }); }
+      try {
+        image_url = await uploadFile(imageFile);
+      } catch (err) {
+        console.error('❌ خطا در آپلود تصویر اصلی:', err.message);
+        return res.status(400).json({ error: err.message });
+      }
     }
 
     if (endImageFile) {
-      try { end_image_url = await uploadFile(endImageFile); }
-      catch (err) { return res.status(400).json({ error: err.message }); }
+      try {
+        end_image_url = await uploadFile(endImageFile);
+      } catch (err) {
+        console.error('❌ خطا در آپلود تصویر انتهایی:', err.message);
+        return res.status(400).json({ error: err.message });
+      }
     }
 
     const parseBool = (v) => v === 'true' || v === true;
@@ -129,6 +142,8 @@ router.post('/createTask', upload.fields([
       catch { return res.status(400).json({ error: 'callBackUrl معتبر نیست.' }); }
     }
 
+    console.log(`📡 در حال ارسال درخواست ایجاد تسک به API → model: ${model}`);
+
     // ارسال به API
     let response;
     try {
@@ -136,19 +151,23 @@ router.post('/createTask', upload.fields([
         headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' }
       });
     } catch (err) {
+      console.error('❌ خطا در ارسال درخواست createTask:', err.response?.data || err.message);
       const msg = err.response?.data?.error || err.message;
       return res.status(err.response?.status || 500).json({ error: 'خطا در ایجاد تسک: ' + msg });
     }
 
     const result = response.data;
-    if (result.code !== 200 || !result.data?.taskId)
+    if (result.code !== 200 || !result.data?.taskId) {
+      console.warn('⚠️ ایجاد تسک ناموفق بود:', result);
       return res.status(500).json({ error: 'ایجاد تسک ناموفق بود.', raw: result });
+    }
+
+    console.log(`✅ تسک با موفقیت ایجاد شد → TaskID: ${result.data.taskId}`);
 
     res.status(200).json({
       success: true,
       message: 'تسک با موفقیت ایجاد شد',
       taskId: result.data.taskId,
-  
     });
 
   } catch (err) {
@@ -157,18 +176,29 @@ router.post('/createTask', upload.fields([
   }
 });
 
+/* 🔍 بررسی وضعیت تسک */
 router.get('/recordInfo/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
     if (!taskId) return res.status(400).json({ error: 'taskId الزامی است.' });
 
+    console.log(`🔎 درخواست بررسی وضعیت تسک → TaskID: ${taskId}`);
+
     const resp = await axios.get(`${RECORD_INFO_URL}?taskId=${taskId}`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
-    // حذف param از data قبل از ارسال به کلاینت
     const sanitizedData = { ...resp.data };
     if (sanitizedData.data?.param) delete sanitizedData.data.param;
+
+    const state = sanitizedData?.data?.state;
+    const flag = sanitizedData?.data?.flag;
+
+    if (state === 'success' || flag === 1) {
+      console.log(`🎉 تسک ${taskId} با موفقیت کامل شد (state=${state}, flag=${flag})`);
+    } else {
+      console.log(`⏳ وضعیت فعلی تسک ${taskId}: state=${state}, flag=${flag}`);
+    }
 
     res.status(200).json(sanitizedData);
 
@@ -177,6 +207,5 @@ router.get('/recordInfo/:taskId', async (req, res) => {
     res.status(err.response?.status || 500).json({ error: 'خطا در دریافت وضعیت تسک.' });
   }
 });
-
 
 export default router;
