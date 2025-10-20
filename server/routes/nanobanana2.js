@@ -220,7 +220,26 @@ router.get("/query", async (req, res) => {
       "get"
     );
     console.info(`✅ Query با کلید ${apiKey}`);
-    res.status(resp.status).json(resp.data);
+
+    // فیلتر کردن فیلد param قبل از ارسال به کاربر
+    const data = resp.data?.data || {};
+    const filteredData = {
+      taskId: data.taskId,
+      model: data.model,
+      state: data.state,
+      resultJson: data.resultJson,
+      failCode: data.failCode,
+      failMsg: data.failMsg,
+      costTime: data.costTime,
+      completeTime: data.completeTime,
+      createTime: data.createTime,
+    };
+
+    res.status(resp.status).json({
+      code: resp.data.code,
+      msg: resp.data.msg,
+      data: filteredData,
+    });
   } catch (err) {
     console.error("Query error:", err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
@@ -228,6 +247,7 @@ router.get("/query", async (req, res) => {
     });
   }
 });
+
 
 /* ===================================================
    404
