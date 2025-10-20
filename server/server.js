@@ -27,6 +27,8 @@ import seedanceRoute from './routes/seedance.js';
 import soraRoute from './routes/sora.js';
 import veo3Route from './routes/veo3.js';
 import hailuoRoute from './routes/hailuo.js';
+import nanobanana2Route from './routes/nanobanana2.js';
+
 
 
 
@@ -73,6 +75,8 @@ app.use('/api/nanobanana', nanobananaRoute);
 app.use('/api/text-to-video', textToVideoProxy);
 app.use('/api/image-description-to-video', imageDescriptionToVideoProxy);
 app.use('/api/image-to-video', imageToVideoProxy);
+app.use('/api/nanobanana2', nanobanana2Route);
+
 
 app.use('/api/sora2', sora2Route);
 app.use('/api/universal', universalRoute);
