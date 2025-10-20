@@ -117,59 +117,70 @@ router.post("/nano-banana-edit", async (req, res) => {
 /* ===================================================
    🧩 Upload + Create Task (Nano-Banana-Edit-Full)
    📌 بدون بازگشت urls و param در پاسخ
+   ✅ حالا تا 10 فایل را پشتیبانی می‌کند
 =================================================== */
-router.post("/nano-banana-edit-full", upload.single("file"), async (req, res) => {
-  const { prompt, output_format = "png", image_size = "auto" } = req.body;
+router.post(
+  "/nano-banana-edit-full",
+  upload.array("files", 10), // تغییر از single به array و نام فیلد "files"
+  async (req, res) => {
+    const { prompt, output_format = "png", image_size = "auto" } = req.body;
 
-  if (!prompt)
-    return res.status(400).json({ error: "❌ فیلد prompt الزامی است." });
-  if (!req.file)
-    return res.status(400).json({ error: "❌ فایل تصویر الزامی است." });
+    if (!prompt)
+      return res.status(400).json({ error: "❌ فیلد prompt الزامی است." });
+    if (!req.files || req.files.length === 0)
+      return res.status(400).json({ error: "❌ فایل تصویر الزامی است." });
 
-  try {
-    // 1️⃣ آپلود فایل
-    const formData = new FormData();
-    formData.append("file", req.file.buffer, req.file.originalname);
-    formData.append("uploadPath", "images/user-uploads");
+    try {
+      // 1️⃣ آپلود تمام فایل‌ها
+      const uploadedUrls = [];
+      for (const file of req.files) {
+        const formData = new FormData();
+        formData.append("file", file.buffer, file.originalname);
+        formData.append("uploadPath", "images/user-uploads");
 
-    const { resp: uploadResp } = await callKieAPI(
-      KIE_UPLOAD_URL,
-      "post",
-      formData,
-      formData.getHeaders()
-    );
+        const { resp: uploadResp } = await callKieAPI(
+          KIE_UPLOAD_URL,
+          "post",
+          formData,
+          formData.getHeaders()
+        );
 
-    const uploadData = uploadResp.data;
-    if (!uploadData.success) {
-      return res
-        .status(500)
-        .json({ error: "❌ آپلود فایل ناموفق بود.", raw: uploadData });
+        const uploadData = uploadResp.data;
+        if (!uploadData.success) {
+          return res.status(500).json({
+            error: "❌ آپلود یکی از فایل‌ها شکست خورد.",
+            raw: uploadData,
+          });
+        }
+        uploadedUrls.push(uploadData.data.downloadUrl);
+      }
+
+      // 2️⃣ ایجاد تسک با تمام عکس‌ها
+      const { resp: createResp } = await callKieAPI(KIE_CREATE_URL, "post", {
+        model: "google/nano-banana-edit",
+        input: { prompt, image_urls: uploadedUrls, output_format, image_size },
+      });
+
+      const taskData = createResp.data?.data || {};
+      res.json({
+        success: true,
+        taskId: taskData.taskId,
+        model: taskData.model || "google/nano-banana-edit",
+        state: taskData.state || "waiting",
+        message: "✅ تسک با موفقیت ایجاد شد.",
+      });
+    } catch (err) {
+      console.error(
+        "Nano-Banana-Edit-Full error:",
+        err.response?.data || err.message
+      );
+      res.status(err.response?.status || 500).json({
+        error: err.response?.data || err.message,
+      });
     }
-
-    const image_url = uploadData.data.downloadUrl;
-
-    // 2️⃣ ایجاد تسک
-    const { resp: createResp } = await callKieAPI(KIE_CREATE_URL, "post", {
-      model: "google/nano-banana-edit",
-      input: { prompt, image_urls: [image_url], output_format, image_size },
-    });
-
-    // ✅ حذف اطلاعات اضافی از پاسخ
-    const taskData = createResp.data?.data || {};
-    res.json({
-      success: true,
-      taskId: taskData.taskId,
-      model: taskData.model || "google/nano-banana-edit",
-      state: taskData.state || "waiting",
-      message: "✅ تسک با موفقیت ایجاد شد.",
-    });
-  } catch (err) {
-    console.error("Nano-Banana-Edit-Full error:", err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({
-      error: err.response?.data || err.message,
-    });
   }
-});
+);
+
 
 /* ===================================================
    3) 🔎 Upscale Image
