@@ -178,11 +178,17 @@ router.get("/status/:service/:taskId", async (req, res) => {
       headers: { Authorization: `Bearer ${API_KEY}` },
     });
 
-    // ✅ پاک کردن generateParam و URL ها
+    // ✅ پاک کردن generateParam و paramJson
     const cleanData = { ...statusResp.data };
-    if (cleanData.data?.data) {
+    
+    // برای سرویس runway: حذف generateParam
+    if (serviceType === "runway" && cleanData.data?.data?.generateParam) {
       delete cleanData.data.data.generateParam;
-      if (cleanData.data.data.videoInfo) delete cleanData.data.data.videoInfo;
+    }
+    
+    // برای سرویس aleph: حذف paramJson
+    if (serviceType === "aleph" && cleanData.data?.paramJson) {
+      delete cleanData.data.paramJson;
     }
 
     // 🔔 لاگ موفقیت وضعیت Task
@@ -199,5 +205,6 @@ router.get("/status/:service/:taskId", async (req, res) => {
     });
   }
 });
+
 
 export default router;
