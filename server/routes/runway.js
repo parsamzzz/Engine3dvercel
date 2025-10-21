@@ -101,8 +101,15 @@ router.post(
       else return res.status(400).json({ error: "❌ مقدار service باید aleph / runway / runway_extend باشد." });
 
       let body = { prompt };
+
       if (serviceType === "aleph") {
+        // 🚨 محدودیت حجم ویدیو طبق مستند: حداکثر 10MB
+        if (req.files?.video?.[0] && req.files.video[0].size > 10 * 1024 * 1024) {
+          throw new Error("❌ حجم ویدیو برای Aleph نباید از 10MB بیشتر باشد.");
+        }
+
         if (!videoUrl) throw new Error("❌ پارامتر videoUrl برای Aleph الزامی است.");
+
         body = { prompt, videoUrl };
         if (referenceImageUpload) body.referenceImage = referenceImageUpload;
         if (callBackUrl) body.callBackUrl = callBackUrl;
@@ -146,10 +153,16 @@ router.post(
         console.warn(`⚠️ Task شکست خورده: ${service.toUpperCase()}, پاسخ سرور:`, genResp.data);
       }
 
+      // پیام هشدار سقف ۵ ثانیه در خروجی Aleph
+      let extraMsg = "";
+      if (serviceType === "aleph") {
+        extraMsg = "⚠️ خروجی Aleph حداکثر ۵ ثانیه است.";
+      }
+
       res.status(200).json({
         success: true,
         task: { taskId: returnedTaskId },
-        msg: `✅ تسک ${service.toUpperCase()} با موفقیت ایجاد شد.`,
+        msg: `✅ تسک ${service.toUpperCase()} با موفقیت ایجاد شد. ${extraMsg}`,
         rawResponse: genResp.data,
       });
     } catch (err) {
@@ -205,6 +218,5 @@ router.get("/status/:service/:taskId", async (req, res) => {
     });
   }
 });
-
 
 export default router;
