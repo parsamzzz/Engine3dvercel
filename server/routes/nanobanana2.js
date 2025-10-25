@@ -6,9 +6,7 @@ import FormData from "form-data";
 const router = express.Router();
 
 // 🟢 لیست کلیدها برای چرخش
-const API_KEYS = [
-  "dbd18fd3191266b86bbf18adb81d67d4",
-];
+const API_KEYS = ["dbd18fd3191266b86bbf18adb81d67d4"];
 
 // 🟢 تابع انتخاب کلید بعدی
 let currentKeyIndex = 0;
@@ -63,7 +61,9 @@ async function callKieAPI(url, method = "post", data = null, headers = {}) {
    1) 🟢 Generate Image
 =================================================== */
 router.post("/nano-banana", async (req, res) => {
+  console.log("🟢 [Generate] درخواست جدید دریافت شد:", req.body);
   const { prompt, output_format = "png", image_size = "auto" } = req.body;
+
   if (!prompt)
     return res.status(400).json({ error: "❌ فیلد prompt الزامی است." });
 
@@ -87,6 +87,7 @@ router.post("/nano-banana", async (req, res) => {
    2) ✏️ Edit Image
 =================================================== */
 router.post("/nano-banana-edit", async (req, res) => {
+  console.log("🟢 [Edit] درخواست جدید دریافت شد:", req.body);
   const {
     prompt,
     image_urls = [],
@@ -116,13 +117,16 @@ router.post("/nano-banana-edit", async (req, res) => {
 
 /* ===================================================
    🧩 Upload + Create Task (Nano-Banana-Edit-Full)
-   📌 بدون بازگشت urls و param در پاسخ
-   ✅ حالا تا 10 فایل را پشتیبانی می‌کند
 =================================================== */
 router.post(
   "/nano-banana-edit-full",
-  upload.array("files", 10), // تغییر از single به array و نام فیلد "files"
+  upload.array("files", 10),
   async (req, res) => {
+    console.log("🟢 [Edit-Full] درخواست جدید:", {
+      prompt: req.body.prompt,
+      files: req.files?.map((f) => f.originalname),
+    });
+
     const { prompt, output_format = "png", image_size = "auto" } = req.body;
 
     if (!prompt)
@@ -131,9 +135,9 @@ router.post(
       return res.status(400).json({ error: "❌ فایل تصویر الزامی است." });
 
     try {
-      // 1️⃣ آپلود تمام فایل‌ها
       const uploadedUrls = [];
       for (const file of req.files) {
+        console.log(`⬆️ در حال آپلود: ${file.originalname}`);
         const formData = new FormData();
         formData.append("file", file.buffer, file.originalname);
         formData.append("uploadPath", "images/user-uploads");
@@ -147,6 +151,7 @@ router.post(
 
         const uploadData = uploadResp.data;
         if (!uploadData.success) {
+          console.warn("❌ یکی از آپلودها شکست خورد:", uploadData);
           return res.status(500).json({
             error: "❌ آپلود یکی از فایل‌ها شکست خورد.",
             raw: uploadData,
@@ -155,13 +160,16 @@ router.post(
         uploadedUrls.push(uploadData.data.downloadUrl);
       }
 
-      // 2️⃣ ایجاد تسک با تمام عکس‌ها
+      console.log("✅ آپلودها تکمیل شد:", uploadedUrls);
+
       const { resp: createResp } = await callKieAPI(KIE_CREATE_URL, "post", {
         model: "google/nano-banana-edit",
         input: { prompt, image_urls: uploadedUrls, output_format, image_size },
       });
 
       const taskData = createResp.data?.data || {};
+      console.log("🟣 تسک جدید ساخته شد:", taskData.taskId);
+
       res.json({
         success: true,
         taskId: taskData.taskId,
@@ -181,11 +189,11 @@ router.post(
   }
 );
 
-
 /* ===================================================
    3) 🔎 Upscale Image
 =================================================== */
 router.post("/nano-banana-upscale", async (req, res) => {
+  console.log("🟢 [Upscale] درخواست جدید:", req.body);
   const { image, scale = 2, face_enhance = false } = req.body;
   if (!image)
     return res.status(400).json({ error: "❌ فیلد image الزامی است." });
@@ -199,7 +207,10 @@ router.post("/nano-banana-upscale", async (req, res) => {
     console.info(`✅ Upscale با کلید ${apiKey}`);
     res.status(resp.status).json(resp.data);
   } catch (err) {
-    console.error("Nano-Banana-Upscale error:", err.response?.data || err.message);
+    console.error(
+      "Nano-Banana-Upscale error:",
+      err.response?.data || err.message
+    );
     res.status(err.response?.status || 500).json({
       error: err.response?.data || err.message,
     });
@@ -210,6 +221,7 @@ router.post("/nano-banana-upscale", async (req, res) => {
    4) 🔎 Query Task (چک وضعیت)
 =================================================== */
 router.get("/query", async (req, res) => {
+  console.log("🟢 [Query] بررسی وضعیت task:", req.query.taskId);
   const { taskId } = req.query;
   if (!taskId)
     return res.status(400).json({ error: "❌ پارامتر taskId الزامی است." });
@@ -221,7 +233,6 @@ router.get("/query", async (req, res) => {
     );
     console.info(`✅ Query با کلید ${apiKey}`);
 
-    // فیلتر کردن فیلد param قبل از ارسال به کاربر
     const data = resp.data?.data || {};
     const filteredData = {
       taskId: data.taskId,
@@ -234,6 +245,17 @@ router.get("/query", async (req, res) => {
       completeTime: data.completeTime,
       createTime: data.createTime,
     };
+
+    if (filteredData.state === "success" && filteredData.resultJson) {
+      try {
+        const parsed = JSON.parse(filteredData.resultJson);
+        const urls = parsed?.resultUrls || [];
+        if (urls.length > 0)
+          console.log("🖼️ لینک خروجی نهایی:", urls.join(", "));
+      } catch (err) {
+        console.warn("⚠️ خطا در parse کردن resultJson:", err.message);
+      }
+    }
 
     res.status(resp.status).json({
       code: resp.data.code,
@@ -248,11 +270,11 @@ router.get("/query", async (req, res) => {
   }
 });
 
-
 /* ===================================================
    404
 =================================================== */
 router.use((req, res) => {
+  console.log("⚠️ درخواست نامعتبر:", req.originalUrl);
   res.status(404).json({ error: "❌ مسیر یافت نشد." });
 });
 
