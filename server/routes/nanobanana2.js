@@ -168,14 +168,14 @@ router.post(
       });
 
       const taskData = createResp.data?.data || {};
-      console.log("🟣 تسک جدید ساخته شد:", taskData.taskId);
+      console.log("🟣 ادیت جدید ساخته شد:", taskData.taskId);
 
       res.json({
         success: true,
         taskId: taskData.taskId,
         model: taskData.model || "google/nano-banana-edit",
         state: taskData.state || "waiting",
-        message: "✅ تسک با موفقیت ایجاد شد.",
+        message: "✅ ادیت با موفقیت ایجاد شد.",
       });
     } catch (err) {
       console.error(
@@ -221,7 +221,6 @@ router.post("/nano-banana-upscale", async (req, res) => {
    4) 🔎 Query Task (چک وضعیت)
 =================================================== */
 router.get("/query", async (req, res) => {
-  console.log("🟢 [Query] بررسی وضعیت task:", req.query.taskId);
   const { taskId } = req.query;
   if (!taskId)
     return res.status(400).json({ error: "❌ پارامتر taskId الزامی است." });
@@ -231,7 +230,6 @@ router.get("/query", async (req, res) => {
       `${KIE_QUERY_URL}?taskId=${taskId}`,
       "get"
     );
-    console.info(`✅ Query با کلید ${apiKey}`);
 
     const data = resp.data?.data || {};
     const filteredData = {
@@ -246,24 +244,12 @@ router.get("/query", async (req, res) => {
       createTime: data.createTime,
     };
 
-    if (filteredData.state === "success" && filteredData.resultJson) {
-      try {
-        const parsed = JSON.parse(filteredData.resultJson);
-        const urls = parsed?.resultUrls || [];
-        if (urls.length > 0)
-          console.log("🖼️ لینک خروجی نهایی:", urls.join(", "));
-      } catch (err) {
-        console.warn("⚠️ خطا در parse کردن resultJson:", err.message);
-      }
-    }
-
     res.status(resp.status).json({
       code: resp.data.code,
       msg: resp.data.msg,
       data: filteredData,
     });
   } catch (err) {
-    console.error("Query error:", err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
       error: err.response?.data || err.message,
     });
