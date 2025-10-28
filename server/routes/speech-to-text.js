@@ -7,9 +7,7 @@ import path from 'path';
 const router = express.Router();
 const upload = multer({ dest: 'tmp/' });
 
-// =====================
-// 🔑 همه کلیدها
-// =====================
+
 const API_KEYS = [
   "AIzaSyAM6ZzH-ngfxY1wKTnoHVMyD2kYOHLd1i4",
   "AIzaSyBRLO9BrEuF5Psn9HzVIgM5t7r4BhfytW0",
