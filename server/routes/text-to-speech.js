@@ -73,7 +73,6 @@ const API_KEYS = [
   "AIzaSyCTvLkv3OLTNrs2oM3aLojfcH-OqxGpoLU",
   "AIzaSyAjQCP-lHUKrkg4Z1cBMebBkFi1Mxu0s4U"
 ];
-
 // =====================
 // 🛡 کلید خصوصی کلاینت
 // =====================
@@ -102,8 +101,15 @@ function getNextAvailableKey() {
       return { key: API_KEYS[idx], idx };
     }
   }
-  console.warn('⚠️ هیچ کلید آزاد در دسترس نیست، در صف منتظر مانده‌ایم.');
   return null;
+}
+
+// =====================
+// 📌 بررسی اینکه همه کلیدها در cooldown هستند یا نه
+// =====================
+function allKeysInCooldown() {
+  const now = Date.now();
+  return keyState.every(k => now < k.cooldownUntil);
 }
 
 // =====================
@@ -134,12 +140,15 @@ async function handleRequest(req, res, next) {
   const totalKeys = API_KEYS.length;
   let triedKeys = 0;
 
-  // 🔁 تا زمانی که یکی جواب بده
+  // 🔁 تا وقتی یکی جواب بده
   while (true) {
-    const keyData = getNextAvailableKey();
+    let keyData = getNextAvailableKey();
+
+    // اگر هیچ کلیدی آزاد نبود، یعنی همشون cooldown شدن → دوباره از اول بچرخ بدون توقف
     if (!keyData) {
-      console.log('⏳ صبر برای کلید آزاد...');
-      await new Promise(r => setTimeout(r, 200));
+      console.warn('⚠️ همه کلیدها در cooldown هستند، دوباره از اول امتحان می‌کنیم...');
+      apiKeyIndex = 0;
+      for (let i = 0; i < totalKeys; i++) keyState[i].inUse = false; // مطمئن شو همه آزاد هستن برای چک
       continue;
     }
 
@@ -195,11 +204,10 @@ async function handleRequest(req, res, next) {
 
       triedKeys++;
       if (triedKeys >= totalKeys) {
-        console.log('🔁 همه کلیدها امتحان شدند، شروع دوباره از اول...');
+        console.log('🔁 همه کلیدها امتحان شدند، شروع دوباره از اول بدون توقف...');
         triedKeys = 0;
-        await new Promise(r => setTimeout(r, 500));
+        apiKeyIndex = 0;
       }
-
       continue;
     }
   }
@@ -227,7 +235,6 @@ router.post('/', (req, res, next) => {
   processQueue();
 });
 
-// مدیریت خطا
 router.use((err, req, res, next) => {
   console.error('💥 Unhandled error:', err);
   res.status(500).json({ error: 'خطای سرور.' });
