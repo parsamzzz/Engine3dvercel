@@ -13,21 +13,21 @@ import speechToTextRouter from './routes/speech-to-text.js';
 import musicRouter from './routes/music.js';
 import soundRouter from './routes/sound.js';
 import voiceRoutes from './routes/voice.js';
-import nanobananaRoute from './routes/nanobanana.js';
-import imageDescriptionToVideoProxy from './routes/image-description-to-video-proxy.js';
-import imageToVideoProxy from './routes/image-to-video-proxy.js';
-import textToVideoProxy from './routes/text-to-video-proxy.js';
-import sora2Route from './routes/sora2.js';
-import universalRoute from './routes/universal.js';
-import wanRoute from './routes/wan.js';
-import lumaRoute from './routes/luma.js';
-import runwayRoute from './routes/runway.js';
-import klingRoute from './routes/kling.js';
-import seedanceRoute from './routes/seedance.js';
-import soraRoute from './routes/sora.js';
-import veo3Route from './routes/veo3.js';
-import hailuoRoute from './routes/hailuo.js';
-import nanobanana2Route from './routes/nanobanana2.js';
+// import nanobananaRoute from './routes/nanobanana.js';
+// import imageDescriptionToVideoProxy from './routes/image-description-to-video-proxy.js';
+// import imageToVideoProxy from './routes/image-to-video-proxy.js';
+// import textToVideoProxy from './routes/text-to-video-proxy.js';
+// import sora2Route from './routes/sora2.js';
+// import universalRoute from './routes/universal.js';
+// import wanRoute from './routes/wan.js';
+// import lumaRoute from './routes/luma.js';
+// import runwayRoute from './routes/runway.js';
+// import klingRoute from './routes/kling.js';
+// import seedanceRoute from './routes/seedance.js';
+// import soraRoute from './routes/sora.js';
+// import veo3Route from './routes/veo3.js';
+// import hailuoRoute from './routes/hailuo.js';
+// import nanobanana2Route from './routes/nanobanana2.js';
 
 
 
@@ -71,23 +71,23 @@ app.use('/api/speech-to-text', speechToTextRouter);
 app.use('/api/music', musicRouter);
 app.use('/api/sound', soundRouter);
 app.use('/api/voice', voiceRoutes);
-app.use('/api/nanobanana', nanobananaRoute);
-app.use('/api/text-to-video', textToVideoProxy);
-app.use('/api/image-description-to-video', imageDescriptionToVideoProxy);
-app.use('/api/image-to-video', imageToVideoProxy);
-app.use('/api/nanobanana2', nanobanana2Route);
+// app.use('/api/nanobanana', nanobananaRoute);
+// app.use('/api/text-to-video', textToVideoProxy);
+// app.use('/api/image-description-to-video', imageDescriptionToVideoProxy);
+// app.use('/api/image-to-video', imageToVideoProxy);
+// app.use('/api/nanobanana2', nanobanana2Route);
 
 
-app.use('/api/sora2', sora2Route);
-app.use('/api/universal', universalRoute);
-app.use('/api/wan', wanRoute);
-app.use('/api/luma', lumaRoute);
-app.use('/api/runway', runwayRoute);
-app.use('/api/kling', klingRoute);
-app.use('/api/seedance', seedanceRoute);
-app.use('/api/sora', soraRoute);
-app.use('/api/veo3', veo3Route);
-app.use('/api/hailuo', hailuoRoute);
+// app.use('/api/sora2', sora2Route);
+// app.use('/api/universal', universalRoute);
+// app.use('/api/wan', wanRoute);
+// app.use('/api/luma', lumaRoute);
+// app.use('/api/runway', runwayRoute);
+// app.use('/api/kling', klingRoute);
+// app.use('/api/seedance', seedanceRoute);
+// app.use('/api/sora', soraRoute);
+// app.use('/api/veo3', veo3Route);
+// app.use('/api/hailuo', hailuoRoute);
 
 
 
