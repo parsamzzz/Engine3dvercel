@@ -54,6 +54,25 @@ app.use('/api/speech-to-text', speechToTextRouter);
 app.use('/api/music', musicRouter);
 app.use('/api/sound', soundRouter);
 app.use('/api/voice', voiceRoutes);
+// app.use('/api/nanobanana', nanobananaRoute);
+// app.use('/api/text-to-video', textToVideoProxy);
+// app.use('/api/image-description-to-video', imageDescriptionToVideoProxy);
+// app.use('/api/image-to-video', imageToVideoProxy);
+// app.use('/api/nanobanana2', nanobanana2Route);
+
+
+// app.use('/api/sora2', sora2Route);
+// app.use('/api/universal', universalRoute);
+// app.use('/api/wan', wanRoute);
+// app.use('/api/luma', lumaRoute);
+// app.use('/api/runway', runwayRoute);
+// app.use('/api/kling', klingRoute);
+// app.use('/api/seedance', seedanceRoute);
+// app.use('/api/sora', soraRoute);
+// app.use('/api/veo3', veo3Route);
+// app.use('/api/hailuo', hailuoRoute);
+
+
 
 
 const BASE_PROMPT = `تو دستیار هوشمند تریدیفای هستی و کاربر وارد داشبورد شده است.  
@@ -239,10 +258,10 @@ app.post('/api/chat', async (req, res) => {
         return res.json({ reply });
       }
 
-      console.warn('⚠️ دسته فعلی شکست خورد، انتقال به بعدی...');
+      console.warn('⚠️ ');
     }
 
-    return res.status(503).json({ error: 'تمام کلیدها محدود یا غیرفعال هستند. بعداً تلاش کنید.' });
+    return res.status(503).json({ error: 'بعداً تلاش کنید.' });
   } catch (err) {
     console.error('AI API error:', err.message);
     return res.status(500).json({ error: 'خطا در ارتباط با سرویس هوش مصنوعی.' });
