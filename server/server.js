@@ -29,20 +29,6 @@ import voiceRoutes from './routes/voice.js';
 // import hailuoRoute from './routes/hailuo.js';
 // import nanobanana2Route from './routes/nanobanana2.js';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 dotenv.config();
 
 const app = express();
@@ -76,8 +62,6 @@ app.use('/api/voice', voiceRoutes);
 // app.use('/api/image-description-to-video', imageDescriptionToVideoProxy);
 // app.use('/api/image-to-video', imageToVideoProxy);
 // app.use('/api/nanobanana2', nanobanana2Route);
-
-
 // app.use('/api/sora2', sora2Route);
 // app.use('/api/universal', universalRoute);
 // app.use('/api/wan', wanRoute);
@@ -88,22 +72,6 @@ app.use('/api/voice', voiceRoutes);
 // app.use('/api/sora', soraRoute);
 // app.use('/api/veo3', veo3Route);
 // app.use('/api/hailuo', hailuoRoute);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const BASE_PROMPT = `تو دستیار هوشمند تریدیفای هستی و کاربر وارد داشبورد شده است.  
 تو کارشناس هوش مصنوعی و پرامپت‌نویسی هستی و هدف تو راهنمایی کاربران برای انتخاب سرویس AI مناسب، کمک به نوشتن پرامپت حرفه‌ای و ترغیب به افزایش اعتبار یا خرید اشتراک است.  
@@ -145,6 +113,91 @@ const BASE_PROMPT = `تو دستیار هوشمند تریدیفای هستی و
 تماس: info@threedify.org | +1(437)326-2654 | ایران: ۰۹۰۵۵۰۱۶۰۰۸`;
 
 
+const API_KEYS = [
+  "AIzaSyDaxiX9-bQR31SsriRVIRv9Ar1UzbENsFg",
+  "AIzaSyCqPw7pUY9HVTGwLXJsCMc0b3nmmBagh5Y",
+  "AIzaSyBsk8mjm_qfRCchjsxf9-mroylLzuW_uj0",
+  "AIzaSyCll9epZcrWhEdwCXI6NXSyv_7YsUq0vNY",
+  "AIzaSyCRfZ6Z_6xDek7yeB0joAe9Z4SUyXb44Ic",
+  "AIzaSyAhtxKcaCYgd75upteTKy6gk9X6XF1Zq2A",
+  "AIzaSyBBLC8ObmnPufQllz-GEB422b5tbnaMSi0",
+  "AIzaSyDGQfUmDfAg0f3c_gupkD4oX0bvLFGxqt4",
+  "AIzaSyBC6FvJXp_401hs7GKQU4N53J47xEFZABI",
+  "AIzaSyBqKjF5kBVSrdAnqEPemYzIAUjxeF1C8ww",
+  "AIzaSyBRaDzYy3ivS_wWD45PQYcPCGwhESle64I",
+  "AIzaSyB8Jypz5MaY7hbrZr_T1KG2l02xmTZKAio",
+  "AIzaSyDR9Tk3f1oQGgwCdNQvX2LscDFsukCJbyY",
+  "AIzaSyAM6ZzH-ngfxY1wKTnoHVMyD2kYOHLd1i4",
+  "AIzaSyCMmOaJFfHY2PnvNe2jAJ8gLb8ToFQxUMc",
+  "AIzaSyC2Z4aD2ZSlpHem3BzA5u7GX8nM-Py5abw",
+  "AIzaSyAkjVmUTeXK0Jnvg4sm6xOZZu6l2z9cEEw",
+  "AIzaSyBZ_2Zu7xS4_4o2nOWmgTgrYWb6uwl_jDI",
+  "AIzaSyDubsjj_oEy1qmF6_9GzuBkEjQuuANkG5M",
+  "AIzaSyBRLO9BrEuF5Psn9HzVIgM5t7r4BhfytW0",
+  "AIzaSyCvPUJ7zLFWJIzVw9UD3voAY9FJXTXAcD4",
+  "AIzaSyDhqJ8gwKQixfPtCZeEzfropdYh9-_yqb0",
+  "AIzaSyDpqyXS3RAsPufJAKT3Zmne8SL1EgOIQKc",
+  "AIzaSyDqXmdk8a3euOrvH-FTsSmUA0BP6wfPPIk",
+  "AIzaSyDMSd0-yTpoYUEJqa2K6rpMhS9I1p0nLcQ",
+  "AIzaSyAQ9qgYwtrutklb3BTpKiW6tAZ2fhPfSWI",
+  "AIzaSyCfX1d9Xr0M7BiDyzwIxy5f3oVJqO__n9Y",
+  "AIzaSyD7wbXAYoSYD0WGg8-6IZOhKyfSym00g7g",
+  "AIzaSyDAqLei5_h4y5Vg1qVSKvdbbLiHQrGfjX4",
+  "AIzaSyADOgOBfQT1U-bRQAxXscq4sPqJJlEz4_0",
+  "AIzaSyAZk5FE4XUx14SEH9n8wy6rh0PbVOM_e0o",
+  "AIzaSyAmDnnMUYcv6QMt-fhF0YHdRzD4x2qDwqg",
+  "AIzaSyBQ_yRx5w6bmhnYpeKqFGnWBwdtWoGFTgc",
+  "AIzaSyBD5V0Y0BYKFUIFvbnmi46IFuh5y-ibSdA",
+  "AIzaSyARk8SUMKga6uXMt6v-FWtGdlo6arfgtUM",
+  "AIzaSyCGcnePSQRL6PUC0zrE3z3NBQEdAWuWIVE",
+  "AIzaSyAXGxErlDP7gEZ5nWCxDl3V0Tu5Poo6AzQ",
+  "AIzaSyAYnfzx1_3UiyE-jyfLpO4i2zrcM0USUoA",
+  "AIzaSyAzweAy_UzoquW2EMJ7n6mzSe-EUQZ7GCk",
+  "AIzaSyDWxlokRrSIMBlup0FA8JOCDCpYsJma7VY",
+  "AIzaSyCoN49vCB-p1pNzkoP0i1P6tGBBgBQMRV4",
+  "AIzaSyBn1Fm_OtU0cWxo4MkpnrDyBJn9HXlwABQ",
+  "AIzaSyDGBqiqsW9U1mivsAwh5vMU0ZARP8E-uvM",
+  "AIzaSyCa_2ERS8aAM5pKFa1xOhwsyJ_IpXxmEdU",
+  "AIzaSyB-bI0yLJG7U5jtBRpYqMsSZdvwkWpHcSE",
+  "AIzaSyDiDSuUQzXOUdUK0RMGflQG1V62FWySvD0",
+  "AIzaSyB20bDSlzPbJVkVJf1_ogIbline3gB32LQ",
+  "AIzaSyA73WazXgApiGxxNIUkNLS6HH58FwnytlY",
+  "AIzaSyD9Kw0CvNCbvHB8EL0LCMI1N-fIwdnwDiY",
+  "AIzaSyCsMSgT_VWOLJRaxDoWHiteKuZm23JtrJM",
+  "AIzaSyANSaxkxwQrGUNT6zkAjvemsRSxNe2eyok",
+  "AIzaSyBrYNNtwbvgky0rdEDyVzGGCTKXgH5Bsp8",
+  "AIzaSyA-MtzXcddrH6ShV_y6hZ7fncpxy0d5JO4",
+  "AIzaSyARi1ijMaLk5bQkJg08UCd0G7DcIJCtiIA",
+  "AIzaSyD1QDm9kNrIi3cbNkEvkTTZTD4KQSh-Io0",
+  "AIzaSyCki2DcqBZh5_5hJ1VmdKzK5VkvDStM9Ic",
+  "AIzaSyC8Jn0bF7FPzO4UHcArQzYMoj_v8vPu1OY",
+  "AIzaSyARHMDI6gJr77QePCbUne6G4U6VhC6caRI",
+  "AIzaSyCG0e6OkV7RZ9xf9doYQgFMlZ_evHNZx4M",
+  "AIzaSyALL4vcUd3Kgk17OCNTt75H5VErcwvDxUc",
+  "AIzaSyAtegVVBwMLCH1lgpYaXpV4xevbhZFpy94",
+  "AIzaSyC1YjFwfMWgRkhG9n3R5ZKoYssPslVjCHI",
+  "AIzaSyDYNLJ9rCPZkunXVlMX-Id2cN89dTWPvhM",
+  "AIzaSyB1Knssvf8xyImnoqyX2TSj0oVft9lqriU",
+  "AIzaSyDsJ_zyRwzjvhn1hDbTnTHk3yPqDOHGVjY",
+  "AIzaSyA2c5kKBlEla9AjDRXYkoakzR0QCvAhZnQ",
+  "AIzaSyDsuifBsjH9_D74w1yxVwi_jYqVtL7RClU",
+  "AIzaSyCVDR3-fPGJ0FlzbrcuXFGH9IIWBpwZndE",
+  "AIzaSyCy54Aij_7FQullxvbGlHb_JspAdkQCvGs",
+  "AIzaSyCTvLkv3OLTNrs2oM3aLojfcH-OqxGpoLU",
+  "AIzaSyAjQCP-lHUKrkg4Z1cBMebBkFi1Mxu0s4U"
+];
+let currentKeyIndex = 0;
+
+function getCurrentKey() {
+  return API_KEYS[currentKeyIndex];
+}
+
+function rotateKey() {
+  currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+  console.log(`🔁 Switched to API key #${currentKeyIndex + 1}`);
+}
+
+// 🎯 Route اصلی با هندل هوشمند خطا
 app.post('/api/chat', async (req, res) => {
   try {
     const { history } = req.body;
@@ -155,17 +208,38 @@ app.post('/api/chat', async (req, res) => {
     const userConversation = history
       .map(h => (h.role === 'user' ? 'کاربر' : 'دستیار') + ': ' + h.text)
       .join('\n');
-
     const fullPrompt = `${BASE_PROMPT}\n\n🧠 مکالمه تا این لحظه:\n${userConversation}\n\n🎯 فقط به آخرین سؤال کاربر پاسخ بده — دقیق، مختصر و متناسب با زبان کاربر.`;
 
-    const aiRes = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.API_KEY}`,
-      { contents: [{ parts: [{ text: fullPrompt }] }] },
-      { headers: { 'Content-Type': 'application/json' } }
-    );
+    let attempt = 0;
+    const maxAttempts = API_KEYS.length;
 
-    const reply = aiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || '❌ پاسخی دریافت نشد.';
-    return res.json({ reply });
+    while (attempt < maxAttempts) {
+      const apiKey = getCurrentKey();
+      try {
+        const aiRes = await axios.post(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          { contents: [{ parts: [{ text: fullPrompt }] }] },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        const reply = aiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || '❌ پاسخی دریافت نشد.';
+        return res.json({ reply });
+      } catch (err) {
+        const status = err.response?.status;
+        console.warn(`⚠️ API Key #${currentKeyIndex + 1} failed: ${status}`);
+
+        if (status === 403 || status === 429) {
+          rotateKey();
+          attempt++;
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+
+        throw err;
+      }
+    }
+
+    return res.status(503).json({ error: 'تمام کلیدها محدود شده‌اند. بعداً تلاش کنید.' });
   } catch (err) {
     console.error('AI API error:', err.response?.status, err.response?.data || err.message);
     return res.status(500).json({ error: 'خطا در ارتباط با سرویس هوش‌مصنوعی.' });
@@ -173,19 +247,11 @@ app.post('/api/chat', async (req, res) => {
 });
 
 // 🌐 سرو فایل‌های استاتیک فرانت‌اند
-app.use(express.static(clientPath, {
-  extensions: ['html', 'css', 'js'],
-  index: false,
-}));
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(clientPath, 'index.html'));
-});
+app.use(express.static(clientPath, { extensions: ['html', 'css', 'js'], index: false }));
+app.get('/', (req, res) => res.sendFile(path.join(clientPath, 'index.html')));
 
 // 🔁 پاسخ به مسیرهای ناموجود
-app.use((req, res) => {
-  res.status(404).send('404 - مسیر مورد نظر وجود ندارد.');
-});
+app.use((req, res) => res.status(404).send('404 - مسیر مورد نظر وجود ندارد.'));
 
 // 🧯 مدیریت خطاهای عمومی
 app.use((err, req, res, next) => {
@@ -194,13 +260,8 @@ app.use((err, req, res, next) => {
 });
 
 // 🔐 مدیریت خطاهای سطح سیستم
-process.on('uncaughtException', (err) => {
-  console.error('Unhandled Exception:', err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
+process.on('uncaughtException', err => console.error('Unhandled Exception:', err));
+process.on('unhandledRejection', (reason, promise) => console.error('Unhandled Rejection:', reason));
 
 // 🚀 استارت سرور
 app.listen(PORT);
@@ -221,5 +282,5 @@ app.listen(PORT);
     } catch (error) {
       console.error(`[Ping] Error:`, error.message);
     }
-  },10 * 60 * 1000);
+  }, 10 * 60 * 1000);
 })();
