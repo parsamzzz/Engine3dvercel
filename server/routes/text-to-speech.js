@@ -20,7 +20,7 @@ const API_KEYS = [
   "AIzaSyBRaDzYy3ivS_wWD45PQYcPCGwhESle64I",
   "AIzaSyB8Jypz5MaY7hbrZr_T1KG2l02xmTZKAio",
   "AIzaSyDR9Tk3f1oQGgwCdNQvX2LscDFsukCJbyY",
-  "AIzaSyAM6ZzH-ngfxY1wKTnoHVMyD2kYOHLd1i4",
+  "AIzaSyAM6ZzH-ngfxY1wKTnoHVMyD2tYOHLd1i4",
   "AIzaSyCMmOaJFfHY2PnvNe2jAJ8gLb8ToFQxUMc",
   "AIzaSyC2Z4aD2ZSlpHem3BzA5u7GX8nM-Py5abw",
   "AIzaSyAkjVmUTeXK0Jnvg4sm6xOZZu6l2z9cEEw",
@@ -70,10 +70,10 @@ const API_KEYS = [
   "AIzaSyAtegVVBwMLCH1lgpYaXpV4xevbhZFpy94",
   "AIzaSyC1YjFwfMWgRkhG9n3R5ZKoYssPslVjCHI",
   "AIzaSyDYNLJ9rCPZkunXVlMX-Id2cN89dTWPvhM",
-  "AIzaSyB1Knssvf8xyImnoqyX2TSj0oVft9lqriU",
-  "AIzaSyDsJ_zyRwzjvhn1hDbTnTHk3yPqDOHGVjY",
+  "AIzaSyB1Knssvf8xyImnoqyX2TSj0vft9lqriU",
+  "AIzaSyDsJ_zyRwzjhn1hDbTnTHk3yPqDOHGVjY",
   "AIzaSyA2c5kKBlEla9AjDRXYkoakzR0QCvAhZnQ",
-  "AIzaSyDsuifBsjH9_D74w1yxVwi_jYqVtL7RClU",
+  "AIzaSyDsuifBsjH9_D74w1yxVwi_jYqM7RClU",
   "AIzaSyCVDR3-fPGJ0FlzbrcuXFGH9IIWBpwZndE",
   "AIzaSyCy54Aij_7FQullxvbGlHb_JspAdkQCvGs",
   "AIzaSyCTvLkv3OLTNrs2oM3aLojfcH-OqxGpoLU",
@@ -153,8 +153,16 @@ async function handleRequest(req, res, next) {
     // اگر هیچ کلیدی آزاد نبود، یعنی همشون cooldown شدن → دوباره از اول بچرخ بدون توقف
     if (!keyData) {
       console.warn('⚠️ همه کلیدها در cooldown هستند، دوباره از اول امتحان می‌کنیم...');
+
+      // ✅ اضافه شد: وقتی همه در cooldown هستند، همه‌ی cooldownها را ریست کن (از حالت cooldown خارج کن)
       apiKeyIndex = 0;
-      for (let i = 0; i < totalKeys; i++) keyState[i].inUse = false; // مطمئن شو همه آزاد هستن برای چک
+      for (let i = 0; i < totalKeys; i++) {
+        keyState[i].inUse = false;      // آزاد کن برای انتخاب مجدد
+        keyState[i].cooldownUntil = 0;  // برداشتن کامل حالت cooldown
+      }
+      console.log('♻️ همه کلیدها از حالت cooldown خارج شدند (cooldown حذف شد).');
+
+      // ادامه حلقه تا دوباره کلیدها انتخاب شوند
       continue;
     }
 
