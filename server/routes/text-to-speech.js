@@ -3,7 +3,9 @@ import { GoogleGenAI, Modality } from '@google/genai';
 
 const router = express.Router();
 
-
+// =====================
+// 🔑 همه کلیدها
+// =====================
 const API_KEYS = [
   "AIzaSyDlA9tgjJtVQX7FnPsnQH39ZThH5fNk5fg",
  "AIzaSyCq2uHV2RqEsXVlBBuII8tF9O35m-gF304",
@@ -81,16 +83,22 @@ const API_KEYS = [
   "AIzaSyAjQCP-lHUKrkg4Z1cBMebBkFi1Mxu0s4U",
   "AIzaSyBIfBLGxjPfrA4jW-lA4N6O5O2w6Gdo-1A"
 ];
-
+// =====================
+// 🛡 کلید خصوصی کلاینت
+// =====================
 const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
 
+// وضعیت کلیدها
 const keyState = API_KEYS.map(() => ({ cooldownUntil: 0, inUse: false }));
 let apiKeyIndex = 0;
 
+// صف درخواست‌ها
 const requestQueue = [];
 let processingQueue = false;
 
-
+// =====================
+// 📌 انتخاب کلید سالم
+// =====================
 function getNextAvailableKey() {
   const totalKeys = API_KEYS.length;
   for (let i = 0; i < totalKeys; i++) {
