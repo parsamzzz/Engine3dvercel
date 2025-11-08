@@ -7,7 +7,7 @@ const router = express.Router();
 // ✅ بهتر است کلید از متغیر محیطی خوانده شود
 const BASE_URL = 'https://api.musicgpt.com/api/public/v1';
 const API_KEY =
-  'duGq0YFMMdQ29xQSlm6EN0dYQFAmFFfminiCb4tPmHYLgy8K7tqBm6W1Z8p7eUn43BCIG-j47V5KVv2hgp3Uug';
+  'qyIzD8mrAyqRhIT-uC_EWNhNUzJ-k-0fx0jIyRxXRKm-w_ZyrGXau1ajV71L2bAl6XI59EPAFVnnuoUiXBZETw';
 
 /* 🎵 ساخت موزیک با MusicAI */
 router.post('/create', async (req, res) => {
