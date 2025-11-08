@@ -120,63 +120,72 @@ async function processQueue() {
 async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
   const totalKeys = API_KEYS.length;
+  let fullPassCount = 0; // ✅ شمارنده‌ی تعداد دفعاتی که کل کلیدها چک شدند
 
-  while (true) {
+  while (fullPassCount < 3) { // ✅ فقط تا ۳ بار مجاز به چرخیدن کل کلیدها هستیم
     // همه کلیدها آزاد هستند
     keyState.forEach(k => k.inUse = false);
 
-    // کلید بعدی را انتخاب می‌کنیم
-    const idx = apiKeyIndex % totalKeys;
-    apiKeyIndex = (apiKeyIndex + 1) % totalKeys;
+    for (let i = 0; i < totalKeys; i++) {
+      const idx = apiKeyIndex % totalKeys;
+      apiKeyIndex = (apiKeyIndex + 1) % totalKeys;
 
-    const key = API_KEYS[idx];
-    keyState[idx].inUse = true;
-    console.log(`🔑 کلید انتخاب شد: ${idx} - ${key.substring(0, 10)}...`);
+      const key = API_KEYS[idx];
+      keyState[idx].inUse = true;
+      console.log(`🔑 کلید انتخاب شد: ${idx} - ${key.substring(0, 10)}...`);
 
-    try {
-      // تنظیمات صوت
-      let speechConfig = {};
-      if (multiSpeaker && Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
-        speechConfig = {
-          multiSpeakerVoiceConfig: {
-            speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
-              speaker,
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } }
-            }))
-          }
-        };
-      } else {
-        speechConfig = { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } } };
+      try {
+        // تنظیمات صوت
+        let speechConfig = {};
+        if (multiSpeaker && Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
+          speechConfig = {
+            multiSpeakerVoiceConfig: {
+              speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
+                speaker,
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } }
+              }))
+            }
+          };
+        } else {
+          speechConfig = { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } } };
+        }
+
+        const ai = new GoogleGenAI({ apiKey: key });
+        console.log(`🚀 ارسال درخواست به Gemini با کلید شماره ${idx}`);
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-preview-tts',
+          contents: [{ parts: [{ text }] }],
+          config: { responseModalities: [Modality.AUDIO], speechConfig }
+        });
+
+        const parts = response.candidates?.[0]?.content?.parts || [];
+        const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
+        keyState[idx].inUse = false;
+
+        if (audioPart?.inlineData?.data) {
+          console.log(`✅ موفقیت: صوت تولید شد با کلید شماره ${idx}`);
+          return res.json({ base64: audioPart.inlineData.data, mimeType: audioPart.inlineData.mimeType });
+        } else {
+          console.warn(`⚠️ صوتی تولید نشد با کلید شماره ${idx}، تلاش با کلید بعدی...`);
+          continue;
+        }
+
+      } catch (err) {
+        keyState[idx].inUse = false;
+        console.error(`❌ خطا با کلید شماره ${idx}:`, err.message);
+        continue; // ادامه با کلید بعدی
       }
-
-      const ai = new GoogleGenAI({ apiKey: key });
-      console.log(`🚀 ارسال درخواست به Gemini با کلید شماره ${idx}`);
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-preview-tts',
-        contents: [{ parts: [{ text }] }],
-        config: { responseModalities: [Modality.AUDIO], speechConfig }
-      });
-
-      const parts = response.candidates?.[0]?.content?.parts || [];
-      const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
-      keyState[idx].inUse = false;
-
-      if (audioPart?.inlineData?.data) {
-        console.log(`✅ موفقیت: صوت تولید شد با کلید شماره ${idx}`);
-        return res.json({ base64: audioPart.inlineData.data, mimeType: audioPart.inlineData.mimeType });
-      } else {
-        console.warn(`⚠️ صوتی تولید نشد با کلید شماره ${idx}، تلاش دوباره...`);
-        continue;
-      }
-
-    } catch (err) {
-      keyState[idx].inUse = false;
-      console.error(`❌ خطا با کلید شماره ${idx}:`, err.message);
-      // حتی اگر خطای 429 یا 403 باشد، کلید دوباره آزاد می‌شود و تلاش ادامه پیدا می‌کند
-      continue;
     }
+
+    fullPassCount++; // ✅ بعد از چرخیدن کامل همه کلیدها
+    console.log(`🔁 پاس ${fullPassCount} از ${3} تمام شد.`);
   }
+
+  // اگر بعد از ۳ بار همه کلیدها خطا داشتند:
+  console.error('🚫 هیچ کلیدی پس از ۳ بار چرخش پاسخ نداد.');
+  return res.status(500).json({ error: 'همه کلیدها در حال حاضر غیرفعال هستند. لطفاً بعداً دوباره تلاش کنید.' });
 }
+
 
 // =====================
 // 📌 مسیر POST
