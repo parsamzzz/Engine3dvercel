@@ -3,9 +3,6 @@ import { GoogleGenAI, Modality } from '@google/genai';
 
 const router = express.Router();
 
-// =====================
-// 🔑 همه کلیدها
-// =====================
 const API_KEYS = [
   "AIzaSyDlA9tgjJtVQX7FnPsnQH39ZThH5fNk5fg",
  "AIzaSyCq2uHV2RqEsXVlBBuII8tF9O35m-gF304",
@@ -83,7 +80,6 @@ const API_KEYS = [
   "AIzaSyAjQCP-lHUKrkg4Z1cBMebBkFi1Mxu0s4U",
   "AIzaSyBIfBLGxjPfrA4jW-lA4N6O5O2w6Gdo-1A"
 ];
-
 // =====================
 // 🛡 کلید خصوصی کلاینت
 // =====================
@@ -108,12 +104,19 @@ function getNextAvailableKey() {
     if (!state.inUse && Date.now() > state.cooldownUntil) {
       apiKeyIndex = (idx + 1) % totalKeys;
       state.inUse = true;
-      console.log(`🔑 کلید انتخاب شد: ${keyState[idx] ? idx : 'نامشخص'} - ${API_KEYS[idx].substring(0, 10)}...`);
+      console.log(`🔑 کلید انتخاب شد: ${idx} - ${API_KEYS[idx].substring(0, 10)}...`);
       return { key: API_KEYS[idx], idx };
     }
   }
-  console.warn('⚠️ هیچ کلید آزاد در دسترس نیست، در صف منتظر مانده‌ایم.');
   return null;
+}
+
+// =====================
+// 📌 بررسی اینکه همه کلیدها در cooldown هستند یا نه
+// =====================
+function allKeysInCooldown() {
+  const now = Date.now();
+  return keyState.every(k => now < k.cooldownUntil);
 }
 
 // =====================
@@ -144,11 +147,15 @@ async function handleRequest(req, res, next) {
   const totalKeys = API_KEYS.length;
   let triedKeys = 0;
 
-  while (triedKeys < totalKeys) {
-    const keyData = getNextAvailableKey();
+  // 🔁 تا وقتی یکی جواب بده
+  while (true) {
+    let keyData = getNextAvailableKey();
+
+    // اگر هیچ کلیدی آزاد نبود، یعنی همشون cooldown شدن → دوباره از اول بچرخ بدون توقف
     if (!keyData) {
-      console.log('⏳ صبر برای کلید آزاد...');
-      await new Promise(r => setTimeout(r, 100)); // کمی صبر کن و دوباره امتحان کن
+      console.warn('⚠️ همه کلیدها در cooldown هستند، دوباره از اول امتحان می‌کنیم...');
+      apiKeyIndex = 0;
+      for (let i = 0; i < totalKeys; i++) keyState[i].inUse = false; // مطمئن شو همه آزاد هستن برای چک
       continue;
     }
 
@@ -179,7 +186,6 @@ async function handleRequest(req, res, next) {
 
       const parts = response.candidates?.[0]?.content?.parts || [];
       const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
-
       keyState[idx].inUse = false;
 
       if (audioPart?.inlineData?.data) {
@@ -190,35 +196,28 @@ async function handleRequest(req, res, next) {
         return res.status(200).json({ message: 'صوتی تولید نشد.', parts });
       }
 
- } catch (err) {
-  keyState[idx].inUse = false;
-  console.error(`❌ خطا با کلید شماره ${idx}:`, err.message);
+    } catch (err) {
+      keyState[idx].inUse = false;
+      console.error(`❌ خطا با کلید شماره ${idx}:`, err.message);
 
-  const status = err.response?.status || 0;
+      const status = err.response?.status || 0;
+      if (status === 429 || err.message.includes('429')) {
+        keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000;
+        console.log(`⏸️ کلید شماره ${idx} در حالت cooldown قرار گرفت (429).`);
+      } else if (status === 403 || err.message.includes('403')) {
+        keyState[idx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
+        console.warn(`🚫 کلید شماره ${idx} غیرفعال شد (403).`);
+      }
 
-  // هندل 429 - محدودیت نرخ
-  if (status === 429 || err.message.includes('429')) {
-    keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; // 1 ساعت
-    console.log(`⏸️ کلید شماره ${idx} در حالت cooldown قرار گرفت (429).`);
-    triedKeys++;
-    continue;
+      triedKeys++;
+      if (triedKeys >= totalKeys) {
+        console.log('🔁 همه کلیدها امتحان شدند، شروع دوباره از اول بدون توقف...');
+        triedKeys = 0;
+        apiKeyIndex = 0;
+      }
+      continue;
+    }
   }
-
-  if (status === 403 || err.message.includes('403')) {
-    keyState[idx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000; 
-    console.warn(`🚫 کلید شماره ${idx} غیرفعال شد (403). کلید بعدی امتحان می‌شود.`);
-    triedKeys++;
-    continue;
-  }
-
- 
-  return next(err);
-}
-
-  }
-
-  console.error('❌ هیچ‌کدام از کلیدها موفق نشد.');
-  res.status(503).json({ error: 'هیچ‌کدام از کلیدها موفق نشد.' });
 }
 
 // =====================
@@ -243,7 +242,6 @@ router.post('/', (req, res, next) => {
   processQueue();
 });
 
-// مدیریت خطا
 router.use((err, req, res, next) => {
   console.error('💥 Unhandled error:', err);
   res.status(500).json({ error: 'خطای سرور.' });
