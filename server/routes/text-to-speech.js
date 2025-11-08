@@ -80,44 +80,19 @@ const API_KEYS = [
   "AIzaSyAjQCP-lHUKrkg4Z1cBMebBkFi1Mxu0s4U",
   "AIzaSyBIfBLGxjPfrA4jW-lA4N6O5O2w6Gdo-1A"
 ];
+
 // =====================
 // 🛡 کلید خصوصی کلاینت
 // =====================
 const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
 
 // وضعیت کلیدها
-const keyState = API_KEYS.map(() => ({ cooldownUntil: 0, inUse: false }));
+const keyState = API_KEYS.map(() => ({ inUse: false }));
 let apiKeyIndex = 0;
 
 // صف درخواست‌ها
 const requestQueue = [];
 let processingQueue = false;
-
-// =====================
-// 📌 انتخاب کلید سالم
-// =====================
-function getNextAvailableKey() {
-  const totalKeys = API_KEYS.length;
-  for (let i = 0; i < totalKeys; i++) {
-    const idx = (apiKeyIndex + i) % totalKeys;
-    const state = keyState[idx];
-    if (!state.inUse && Date.now() > state.cooldownUntil) {
-      apiKeyIndex = (idx + 1) % totalKeys;
-      state.inUse = true;
-      console.log(`🔑 کلید انتخاب شد: ${idx} - ${API_KEYS[idx].substring(0, 10)}...`);
-      return { key: API_KEYS[idx], idx };
-    }
-  }
-  return null;
-}
-
-// =====================
-// 📌 بررسی اینکه همه کلیدها در cooldown هستند یا نه
-// =====================
-function allKeysInCooldown() {
-  const now = Date.now();
-  return keyState.every(k => now < k.cooldownUntil);
-}
 
 // =====================
 // 📌 پردازش صف
@@ -145,23 +120,21 @@ async function processQueue() {
 async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
   const totalKeys = API_KEYS.length;
-  let triedKeys = 0;
 
-  // 🔁 تا وقتی یکی جواب بده
   while (true) {
-    let keyData = getNextAvailableKey();
+    // همه کلیدها آزاد هستند
+    keyState.forEach(k => k.inUse = false);
 
-    // اگر هیچ کلیدی آزاد نبود، یعنی همشون cooldown شدن → دوباره از اول بچرخ بدون توقف
-    if (!keyData) {
-      console.warn('⚠️ همه کلیدها در cooldown هستند، دوباره از اول امتحان می‌کنیم...');
-      apiKeyIndex = 0;
-      for (let i = 0; i < totalKeys; i++) keyState[i].inUse = false; // مطمئن شو همه آزاد هستن برای چک
-      continue;
-    }
+    // کلید بعدی را انتخاب می‌کنیم
+    const idx = apiKeyIndex % totalKeys;
+    apiKeyIndex = (apiKeyIndex + 1) % totalKeys;
 
-    const { key, idx } = keyData;
+    const key = API_KEYS[idx];
+    keyState[idx].inUse = true;
+    console.log(`🔑 کلید انتخاب شد: ${idx} - ${key.substring(0, 10)}...`);
 
     try {
+      // تنظیمات صوت
       let speechConfig = {};
       if (multiSpeaker && Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
         speechConfig = {
@@ -192,29 +165,14 @@ async function handleRequest(req, res, next) {
         console.log(`✅ موفقیت: صوت تولید شد با کلید شماره ${idx}`);
         return res.json({ base64: audioPart.inlineData.data, mimeType: audioPart.inlineData.mimeType });
       } else {
-        console.warn(`⚠️ صوتی تولید نشد با کلید شماره ${idx}`);
-        return res.status(200).json({ message: 'صوتی تولید نشد.', parts });
+        console.warn(`⚠️ صوتی تولید نشد با کلید شماره ${idx}، تلاش دوباره...`);
+        continue;
       }
 
     } catch (err) {
       keyState[idx].inUse = false;
       console.error(`❌ خطا با کلید شماره ${idx}:`, err.message);
-
-      const status = err.response?.status || 0;
-      if (status === 429 || err.message.includes('429')) {
-        keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000;
-        console.log(`⏸️ کلید شماره ${idx} در حالت cooldown قرار گرفت (429).`);
-      } else if (status === 403 || err.message.includes('403')) {
-        keyState[idx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
-        console.warn(`🚫 کلید شماره ${idx} غیرفعال شد (403).`);
-      }
-
-      triedKeys++;
-      if (triedKeys >= totalKeys) {
-        console.log('🔁 همه کلیدها امتحان شدند، شروع دوباره از اول بدون توقف...');
-        triedKeys = 0;
-        apiKeyIndex = 0;
-      }
+      // حتی اگر خطای 429 یا 403 باشد، کلید دوباره آزاد می‌شود و تلاش ادامه پیدا می‌کند
       continue;
     }
   }
@@ -242,6 +200,9 @@ router.post('/', (req, res, next) => {
   processQueue();
 });
 
+// =====================
+// 📌 هندل خطاهای عمومی
+// =====================
 router.use((err, req, res, next) => {
   console.error('💥 Unhandled error:', err);
   res.status(500).json({ error: 'خطای سرور.' });
