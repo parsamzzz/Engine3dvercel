@@ -173,37 +173,42 @@ async function handleRequest(req, res, next) {
         console.warn(`⚠️ درخواست پردازش شد اما تصویری تولید نشد. index ${idx}`);
         return res.status(200).json({ message: "درخواست پردازش شد، اما تصویری تولید نشد.", parts });
       }
-   } catch (err) {
-  keyState[idx].inUse = false;
-  console.error(`❌ خطا در کلید index ${idx}:`, err.message);
+    } catch (err) {
+      keyState[idx].inUse = false;
+      console.error(`❌ خطا در کلید index ${idx}:`, err.message);
 
-  const status = err.response?.status || 0;
+      const status = err.response?.status || 0;
 
+      if (status === 429 || err.message.includes("429")) {
+        keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; 
+        console.warn(`⏳ کلید index ${idx} در cooldown به مدت 1 ساعت قرار گرفت (429).`);
+        triedKeys++;
+        continue;
+      }
 
-  if (status === 429 || err.message.includes("429")) {
-    keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; 
-    console.warn(`⏳ کلید index ${idx} در cooldown به مدت 1 ساعت قرار گرفت (429).`);
-    triedKeys++;
-    continue;
-  }
+      if (status === 403 || err.message.includes("403")) {
+        keyState[idx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
+        console.warn(`🚫 کلید index ${idx} غیرفعال شد (403). کلید بعدی امتحان می‌شود.`);
+        triedKeys++;
+        continue;
+      }
 
+      // هندل کردن خطای 400
+      if (status === 400 || err.message.includes("400")) {
+        console.warn(`⚠️ خطای 400 در کلید index ${idx}... کلید بعدی امتحان می‌شود.`);
+        triedKeys++;
+        continue;
+      }
 
-  if (status === 403 || err.message.includes("403")) {
-    keyState[idx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
-    console.warn(`🚫 کلید index ${idx} غیرفعال شد (403). کلید بعدی امتحان می‌شود.`);
-    triedKeys++;
-    continue;
-  }
-
-  // سایر خطاها => خروج از حلقه و next(err)
-  return next(err);
-}
-
+      // سایر خطاها => خروج از حلقه و next(err)
+      return next(err);
+    }
   }
 
   console.error("❌ هیچ‌کدام از کلیدها موفق نشد.");
   res.status(503).json({ error: "هیچ‌کدام از کلیدها موفق نشد." });
 }
+
 
 // =====================
 // 📌 مسیر POST با صف
