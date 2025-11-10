@@ -4,6 +4,7 @@ import { GoogleGenAI, Modality } from '@google/genai';
 const router = express.Router();
 
 const API_KEYS = [
+  "AIzaSyBxPhDszuDkjVnr50XM9uTwDzp7FET2RrE",
   "AIzaSyDlA9tgjJtVQX7FnPsnQH39ZThH5fNk5fg",
  "AIzaSyCq2uHV2RqEsXVlBBuII8tF9O35m-gF304",
   "AIzaSyAs8TIThsAQm5VnqU3p64V2Ia5c0Gr0bxY",
