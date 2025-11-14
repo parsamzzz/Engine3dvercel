@@ -10,35 +10,18 @@ const upload = multer({ dest: 'tmp/' });
 const GEMINI_API_KEY = "AIzaSyDlA9tgjJtVQX7FnPsnQH39ZThH5fNk5fg";
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-const ALLOWED_ORIGINS = [
- 'https://threedify.org',
-  'https://chatbot.threedify.org',
-  'https://en.threedify.org'
-];
+// ❌ ALLOWED_ORIGINS حذف شد
+// ❌ Origin filtering حذف شد
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, false); // درخواست‌های بدون Origin رد میشه
-    if (ALLOWED_ORIGINS.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error("Not Allowed Your IP Address Banned"));
-  },
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-};
-
-router.use(cors(corsOptions));
-router.options('*', cors(corsOptions));
+// 🔓 CORS کاملاً آزاد
+router.use(cors({ origin: true, credentials: true }));
+router.options('*', cors({ origin: true, credentials: true }));
 
 // حافظه موقت برای وضعیت عملیات
 const operations = {};
 
-// تابع کمکی برای گرفتن operationId
 const extractOperationId = (fullName) => fullName.split('/').pop();
 
-// تابع کمکی برای گرفتن fileId از لینک گوگل
 const extractFileId = (url) => {
   const match = url.match(/\/files\/([^:]+):download/);
   return match ? match[1] : null;
