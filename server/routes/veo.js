@@ -2,7 +2,6 @@ import express from 'express';
 import axios from 'axios';
 import multer from 'multer';
 import fs from 'fs';
-import cors from 'cors';
 
 const router = express.Router();
 const upload = multer({ dest: 'tmp/' });
@@ -10,18 +9,13 @@ const upload = multer({ dest: 'tmp/' });
 const GEMINI_API_KEY = "AIzaSyDlA9tgjJtVQX7FnPsnQH39ZThH5fNk5fg";
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-// ❌ ALLOWED_ORIGINS حذف شد
-// ❌ Origin filtering حذف شد
-
-// 🔓 CORS کاملاً آزاد
-router.use(cors({ origin: true, credentials: true }));
-router.options('*', cors({ origin: true, credentials: true }));
-
 // حافظه موقت برای وضعیت عملیات
 const operations = {};
 
+// تابع کمکی برای گرفتن operationId
 const extractOperationId = (fullName) => fullName.split('/').pop();
 
+// تابع کمکی برای گرفتن fileId از لینک گوگل
 const extractFileId = (url) => {
   const match = url.match(/\/files\/([^:]+):download/);
   return match ? match[1] : null;
