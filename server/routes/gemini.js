@@ -10,6 +10,14 @@ const upload = multer();
 // 🔑 همه کلیدها
 // =====================
 const API_KEYS = [
+  "AIzaSyBxPhDszuDkjVnr50XM9uTwDzp7FET2RrE",
+  "AIzaSyDV2raljo0hG-SmwzYU_8VsvNZPIVq5jYs",
+"AIzaSyDRlDTV8m70Z4Xi8kdH3d7-SqwO5DpjIvc",
+"AIzaSyAPDPoJnwSiMWmI4k1bXkAcW-NY4gpQ2ss",
+"AIzaSyB6A8aW6Q5bj-jtylwgB7_MDAMttABG7A0",
+  "AIzaSyDlA9tgjJtVQX7FnPsnQH39ZThH5fNk5fg",
+ "AIzaSyCq2uHV2RqEsXVlBBuII8tF9O35m-gF304",
+  "AIzaSyAs8TIThsAQm5VnqU3p64V2Ia5c0Gr0bxY",
   "AIzaSyDaxiX9-bQR31SsriRVIRv9Ar1UzbENsFg",
   "AIzaSyCqPw7pUY9HVTGwLXJsCMc0b3nmmBagh5Y",
   "AIzaSyBsk8mjm_qfRCchjsxf9-mroylLzuW_uj0",
@@ -80,8 +88,29 @@ const API_KEYS = [
   "AIzaSyCVDR3-fPGJ0FlzbrcuXFGH9IIWBpwZndE",
   "AIzaSyCy54Aij_7FQullxvbGlHb_JspAdkQCvGs",
   "AIzaSyCTvLkv3OLTNrs2oM3aLojfcH-OqxGpoLU",
-  "AIzaSyAjQCP-lHUKrkg4Z1cBMebBkFi1Mxu0s4U"
+  "AIzaSyAjQCP-lHUKrkg4Z1cBMebBkFi1Mxu0s4U",
+  "AIzaSyBIfBLGxjPfrA4jW-lA4N6O5O2w6Gdo-1A",
+  "AIzaSyCrgk9uOoM1pFav50NA4DEDvVWrt4mTjZw",
+  "AIzaSyBAmw3lUQp9U7FW0e9F-9APtIBDIhOqTtM",
+  "AIzaSyCktjDvAZ6W7rgjMGp4BkivNgpbuWBJeko",
+"AIzaSyBqoiXFXFZ-yDz3lMROHNo9y_vGNYOl344",
+"AIzaSyCWFpYQH1he-YtloLrlIdQy_QYDRuqGGJA",
+"AIzaSyDB23RIMVS3VkE9C-aNEqvmHtXLyeSP87o",
+"AIzaSyBDmos0BxSC3iROGUTJlaAsxb8JhOu4Ys4",
+"AIzaSyATjzlYfN4JV1K1qGqxzEm1PqrEJZZ1PdA",
+"AIzaSyCt21m4aPc17ARvRarWark85uVgtAmoXIg",
+"AIzaSyAcILVh0F8Zf-kKlxChnhA7mLDObbp8J-c",
+"AIzaSyDkybJu2ASfyo6VyBxj5vut95L1ARGiuvE",
+"AIzaSyB_ynVyZg-Cr6gFY5LMsFdTFxaJB8BjskU",
+"AIzaSyBCgOXpm8vw3fiBMzynq27CqNPQM7EcMjM",
+"AIzaSyDbuhr5Rk3gcZbAmL6Zx8XtDzQcvz4s_Bo",
+"AIzaSyBsPPKOgJrNzFGxibAwJ3-9lPWmmoUdPhI",
+"AIzaSyDOFQVMASy1Wa8Ry-Thp_5EJcABAbyYvX4",
+"AIzaSyAWiai4djhQfUVBDRal3GSFDOonfE19zw0",
+"AIzaSyCEDSxJlsxTSfgTQbnCMjMPpJosyqRseDk",
+
 ];
+
 
 // =====================
 // 🛡 کلید خصوصی کلاینت
