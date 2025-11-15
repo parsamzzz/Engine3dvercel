@@ -156,7 +156,7 @@ async function handleRequest(req, res, next) {
     try {
       const ai = new GoogleGenAI({ apiKey: key });
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash-preview-image-generation",
+        model: "Gemini 2.0 Flash",
         contents: prompt,
         config: { responseModalities: [Modality.TEXT, Modality.IMAGE] }
       });
