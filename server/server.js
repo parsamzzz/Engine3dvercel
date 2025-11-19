@@ -27,7 +27,7 @@ import voiceRoutes from './routes/voice.js';
 // import soraRoute from './routes/sora.js';
 import veoRoute from './routes/veo.js';
 // import hailuoRoute from './routes/hailuo.js';
-// import nanobanana2Route from './routes/nanobanana2.js';
+import nanobanana2Route from './routes/nanobanana2.js';
 
 dotenv.config();
 
@@ -58,7 +58,7 @@ app.use('/api/voice', voiceRoutes);
 // app.use('/api/text-to-video', textToVideoProxy);
 // app.use('/api/image-description-to-video', imageDescriptionToVideoProxy);
 // app.use('/api/image-to-video', imageToVideoProxy);
-// app.use('/api/nanobanana2', nanobanana2Route);
+app.use('/api/nanobanana2', nanobanana2Route);
 
 
 // app.use('/api/sora2', sora2Route);
