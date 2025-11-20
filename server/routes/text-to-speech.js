@@ -18,7 +18,26 @@ const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
 // =====================
 const requestQueue = [];
 let activeCount = 0;
-const MAX_CONCURRENT = 3;
+const MAX_CONCURRENT = 2;
+
+// =====================
+// ⏱ Rate Limit (2 req/sec)
+// =====================
+let requestTimestamps = [];
+
+function cleanOldRequests() {
+  const now = Date.now();
+  requestTimestamps = requestTimestamps.filter(ts => now - ts < 1000);
+}
+
+function canProceedRateLimit() {
+  cleanOldRequests();
+  return requestTimestamps.length < 2; // فقط 2 درخواست در 1 ثانیه
+}
+
+function recordRequest() {
+  requestTimestamps.push(Date.now());
+}
 
 // =====================
 // 🎛 پردازش صف
@@ -36,7 +55,7 @@ async function processQueue() {
     next(err);
   } finally {
     activeCount--;
-    processQueue(); // اجرای درخواست بعدی
+    processQueue();
   }
 }
 
@@ -47,7 +66,6 @@ async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
 
   try {
-    // تنظیمات صوت
     let speechConfig = {};
 
     if (multiSpeaker && Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
@@ -76,9 +94,7 @@ async function handleRequest(req, res, next) {
     });
 
     const parts = response.candidates?.[0]?.content?.parts || [];
-    const audioPart = parts.find(
-      part => part.inlineData?.mimeType?.startsWith('audio/')
-    );
+    const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
 
     if (!audioPart) {
       console.warn("⚠️ صوتی تولید نشد!");
@@ -113,7 +129,14 @@ router.post('/', (req, res, next) => {
     return res.status(400).json({ error: 'text معتبر نیست.' });
   }
 
-  // اضافه شدن به صف
+  // --- Rate Limit Check ---
+  if (!canProceedRateLimit()) {
+    return res.status(429).json({ error: 'Too Many Requests - لطفا 1 ثانیه بعد تلاش کنید.' });
+  }
+
+  recordRequest();
+
+  // --- Queue + Concurrency ---
   requestQueue.push({ req, res, next });
   processQueue();
 });
