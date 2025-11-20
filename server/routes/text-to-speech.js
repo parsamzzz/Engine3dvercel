@@ -4,7 +4,13 @@ import { GoogleGenAI, Modality } from '@google/genai';
 const router = express.Router();
 
 const API_KEYS = [
+  "AIzaSyDoYJsF8HOLi0E6IXzX51_nZYAZZ3CTCCs",
+  "AIzaSyC7KikBEfTlHOLShJLDTbv0c5rFYwIiI5E",
+  "AIzaSyA67sQlb9HS-e8fxxzbsqs8teOVC18tKg0",
   "AIzaSyAiKTr012h0vPeQ59vm4wbDNEt075XtXBc",
+  "AIzaSyBXUuwflnWbZg2QpV5UTS3OMxuhJnvGt1w",
+  "AIzaSyAr05IfZPEai-60SwBDkg1_N-WFQSIjb9c",
+  "AIzaSyC-7cwztdahrne6VrC81Nsd5XNlV7--ZfY",
 "AIzaSyBZpRBwmX70A_q_g680975uBNYD0ascv7g",
 "AIzaSyDlWet1YLKUKTyhzIhf-ehOo4QUN5Dao2c",
 "AIzaSyAw-Um55X0N3pgdBJdmddRUh-DSuDY1LSM",
@@ -107,7 +113,9 @@ const API_KEYS = [
 "AIzaSyAWiai4djhQfUVBDRal3GSFDOonfE19zw0",
 "AIzaSyCEDSxJlsxTSfgTQbnCMjMPpJosyqRseDk",
 "AIzaSyBU-J_wY5irpDFNcQaPEa0HgoZGgCTgN1Q",
-"AIzaSyAIzpDn6uC3kkZPFyXa8JXICdTGPelc1Jg"
+"AIzaSyAIzpDn6uC3kkZPFyXa8JXICdTGPelc1Jg",
+  "AIzaSyAEP-7WgAT0nm13TwfagNdFBiXinMblomA",
+
 
 ];
 
