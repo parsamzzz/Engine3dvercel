@@ -1,21 +1,17 @@
 import express from 'express';
 import { GoogleGenAI, Modality } from '@google/genai';
-import dotenv from 'dotenv';
-
-// بارگذاری متغیرهای محیطی از فایل .env
-dotenv.config();
 
 const router = express.Router();
 
 // =====================
 // 🔑 کلید اصلی
 // =====================
-const API_KEY = process.env.API_KEY || "AIzaSyAiKTr012h0vPeQ59vm4wbDNEt075XtXBc";  // اگر در .env نبود، از مقدار پیش‌فرض استفاده می‌شود
+const API_KEY = "AIzaSyAiKTr012h0vPeQ59vm4wbDNEt075XtXBc";
 
 // =====================
 // 🛡 کلید خصوصی کلاینت
 // =====================
-const PRIVATE_KEY = process.env.PRIVATE_KEY;  // خواندن از .env
+const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
 
 // =====================
 // ⏳ صف + کنترل همزمانی
