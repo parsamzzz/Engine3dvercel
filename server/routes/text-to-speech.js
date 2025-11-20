@@ -6,8 +6,7 @@ const router = express.Router();
 // =====================
 // 🔑 کلید اصلی
 // =====================
-const API_KEY = process.env.API_KEY || "AIzaSyBKHPvD4LzQMb2YzLkBrcI9JNI1mWfYAuM";
-
+const API_KEY = "AIzaSyBKHPvD4LzQMb2YzLkBrcI9JNI1mWfYAuM";
 
 // =====================
 // 🛡 کلید خصوصی کلاینت
