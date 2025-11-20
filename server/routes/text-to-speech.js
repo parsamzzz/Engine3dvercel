@@ -8,43 +8,59 @@ dotenv.config();
 const router = express.Router();
 
 // =====================
-// 🔑 کلید API از متغیر محیطی
+// 🔑 کلید اصلی
 // =====================
-const API_KEY = process.env.GOOGLE_API_KEY;
+const API_KEY = process.env.API_KEY || "AIzaSyAiKTr012h0vPeQ59vm4wbDNEt075XtXBc";  // اگر در .env نبود، از مقدار پیش‌فرض استفاده می‌شود
 
 // =====================
 // 🛡 کلید خصوصی کلاینت
 // =====================
-const PRIVATE_KEY = process.env.CLIENT_PRIVATE_KEY;
+const PRIVATE_KEY = process.env.PRIVATE_KEY;  // خواندن از .env
 
 // =====================
 // ⏳ صف + کنترل همزمانی
 // =====================
 const requestQueue = [];
 let activeCount = 0;
-const MAX_CONCURRENT = 1;  // فقط یک درخواست همزمان ارسال می‌شود
+const MAX_CONCURRENT = 2;
 
 // =====================
-// ⏱ Rate Limit (یک درخواست در هر ثانیه)
+// ⏱ Rate Limit (2 req/sec)
 // =====================
+let requestTimestamps = [];
 
-function processQueue() {
+function cleanOldRequests() {
+  const now = Date.now();
+  requestTimestamps = requestTimestamps.filter(ts => now - ts < 1000);
+}
+
+function canProceedRateLimit() {
+  cleanOldRequests();
+  return requestTimestamps.length < 2; // فقط 2 درخواست در 1 ثانیه
+}
+
+function recordRequest() {
+  requestTimestamps.push(Date.now());
+}
+
+// =====================
+// 🎛 پردازش صف
+// =====================
+async function processQueue() {
+  if (activeCount >= MAX_CONCURRENT) return;
   if (requestQueue.length === 0) return;
 
   const { req, res, next } = requestQueue.shift();
   activeCount++;
 
-  // ارسال درخواست بعدی پس از 1 ثانیه
-  setTimeout(async () => {
-    try {
-      await handleRequest(req, res, next);
-    } catch (err) {
-      next(err);
-    } finally {
-      activeCount--;
-      processQueue(); // پردازش درخواست‌های بعدی
-    }
-  }, 2000); // تأخیر 1 ثانیه برای درخواست بعدی
+  try {
+    await handleRequest(req, res, next);
+  } catch (err) {
+    next(err);
+  } finally {
+    activeCount--;
+    processQueue();
+  }
 }
 
 // =====================
@@ -77,7 +93,7 @@ async function handleRequest(req, res, next) {
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-preview-tts',
-      contents: [{ parts: [{ text }] }],  // متن درخواست
+      contents: [{ parts: [{ text }] }],
       config: { responseModalities: [Modality.AUDIO], speechConfig }
     });
 
@@ -117,10 +133,15 @@ router.post('/', (req, res, next) => {
     return res.status(400).json({ error: 'text معتبر نیست.' });
   }
 
-  // اضافه کردن درخواست به صف
-  requestQueue.push({ req, res, next });
+  // --- Rate Limit Check ---
+  if (!canProceedRateLimit()) {
+    return res.status(429).json({ error: 'Too Many Requests - لطفا 1 ثانیه بعد تلاش کنید.' });
+  }
 
-  // شروع پردازش صف
+  recordRequest();
+
+  // --- Queue + Concurrency ---
+  requestQueue.push({ req, res, next });
   processQueue();
 });
 
