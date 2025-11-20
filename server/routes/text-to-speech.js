@@ -1,11 +1,8 @@
-import express from "express";
-import { GoogleGenAI, Modality } from "@google/genai";
+import express from 'express';
+import { GoogleGenAI, Modality } from '@google/genai';
 
 const router = express.Router();
 
-// ==============================
-//  YOUR 100 API KEYS
-// ==============================
 const API_KEYS = [
   "AIzaSyDoYJsF8HOLi0E6IXzX51_nZYAZZ3CTCCs",
   "AIzaSyC7KikBEfTlHOLShJLDTbv0c5rFYwIiI5E",
@@ -121,185 +118,194 @@ const API_KEYS = [
 
 
 ];
+// =====================
+// 🛡 کلید خصوصی کلاینت
+// =====================
+const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
 
-// ==============================
-// RATE LIMIT (FROM OFFICIAL TABLE)
-// ==============================
-const MIN_INTERVAL = 20 * 1000;      // 3 RPM → 1 request every 20 seconds
-const DAILY_LIMIT = 15;              // 15 requests per day per key
+// =====================
+// RATE LIMIT واقعی TTS بر اساس جدول گوگل
+// =====================
+const TTS_MIN_INTERVAL = 20 * 1000; // هر کلید فقط 1 درخواست در 20 ثانیه
+const TTS_DAILY_LIMIT = 15;
 
-// ==============================
-// PSY MIDNIGHT RESET
-// ==============================
-function nextPSTMidnight() {
-  const now = new Date();
-  const PST_OFFSET = 8 * 60 * 60 * 1000;
-
-  const pst = new Date(now.getTime() - PST_OFFSET);
-  pst.setHours(24, 0, 0, 0);
-
-  return pst.getTime() + PST_OFFSET;
-}
-
-// ==============================
-// KEY STATE
-// ==============================
+// وضعیت کلیدها
 const keyState = API_KEYS.map(() => ({
-  lastUsed: 0,
-  dailyCount: 0,
-  resetAt: nextPSTMidnight(),
   cooldownUntil: 0,
-  inUse: false
+  inUse: false,
+  lastUsed: 0,
+  dailyCount: 0
 }));
 
-// ==============================
-// FIND FREE KEY
-// ==============================
-function findFreeKey() {
+let apiKeyIndex = 0;
+
+// صف درخواست‌ها
+const requestQueue = [];
+let processingQueue = false;
+
+// =====================
+// 📌 انتخاب کلید سالم (اصلاح شده)
+// =====================
+function getNextAvailableKey() {
   const now = Date.now();
+  const totalKeys = API_KEYS.length;
 
-  for (let i = 0; i < API_KEYS.length; i++) {
-    const st = keyState[i];
+  for (let i = 0; i < totalKeys; i++) {
+    const idx = (apiKeyIndex + i) % totalKeys;
+    const state = keyState[idx];
 
-    // daily reset
-    if (now >= st.resetAt) {
-      st.dailyCount = 0;
-      st.resetAt = nextPSTMidnight();
+    // هنوز cooldown است؟
+    if (now < state.cooldownUntil) continue;
+
+    // هنوز 20 ثانیه کامل نشده؟
+    if (now - state.lastUsed < TTS_MIN_INTERVAL) continue;
+
+    // سقف روزانه 15؟
+    if (state.dailyCount >= TTS_DAILY_LIMIT) continue;
+
+    if (!state.inUse) {
+      apiKeyIndex = (idx + 1) % totalKeys;
+      state.inUse = true;
+      state.lastUsed = now;
+      state.dailyCount++;
+      console.log(`🔑 کلید انتخاب شد: ${idx} - ${API_KEYS[idx].slice(0, 10)}...`);
+      return { key: API_KEYS[idx], idx };
     }
-
-    if (st.inUse) continue;
-
-    if (now < st.cooldownUntil) continue;
-
-    if (st.dailyCount >= DAILY_LIMIT) continue;
-
-    if (now - st.lastUsed < MIN_INTERVAL) continue;
-
-    return i;
   }
 
-  return -1;
+  return null;
 }
 
-// ==============================
-// WAIT UNTIL A KEY IS FREE
-// ==============================
-async function waitForKey() {
+// =====================
+// 📌 پردازش صف
+// =====================
+async function processQueue() {
+  if (processingQueue) return;
+  processingQueue = true;
+
+  while (requestQueue.length > 0) {
+    const { req, res, next } = requestQueue.shift();
+
+    try {
+      await handleRequest(req, res, next);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  processingQueue = false;
+}
+
+// =====================
+// 📌 تابع اصلی درخواست (اصلاح 429)
+// =====================
+async function handleRequest(req, res, next) {
+  const { text, multiSpeaker, voiceName } = req.body;
+  const totalKeys = API_KEYS.length;
+  let triedKeys = 0;
+
   while (true) {
-    const idx = findFreeKey();
-    if (idx !== -1) return idx;
-    await new Promise(res => setTimeout(res, 50));
+    let keyData = getNextAvailableKey();
+
+    if (!keyData) {
+      apiKeyIndex = 0;
+      for (let i = 0; i < totalKeys; i++) keyState[i].inUse = false;
+      continue;
+    }
+
+    const { key, idx } = keyData;
+
+    try {
+      let speechConfig = {};
+      if (multiSpeaker && Array.isArray(multiSpeaker)) {
+        speechConfig = {
+          multiSpeakerVoiceConfig: {
+            speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
+              speaker,
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } }
+            }))
+          }
+        };
+      } else {
+        speechConfig = { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } } };
+      }
+
+      const ai = new GoogleGenAI({ apiKey: key });
+      console.log(`🚀 ارسال درخواست با کلید ${idx}`);
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-preview-tts',
+        contents: [{ parts: [{ text }] }],
+        config: { responseModalities: [Modality.AUDIO], speechConfig }
+      });
+
+      keyState[idx].inUse = false;
+
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      const audioPart = parts.find(p => p.inlineData?.mimeType?.startsWith('audio/'));
+
+      if (audioPart?.inlineData?.data) {
+        return res.json({
+          base64: audioPart.inlineData.data,
+          mimeType: audioPart.inlineData.mimeType
+        });
+      }
+
+      return res.status(200).json({ message: "صوتی تولید نشد." });
+
+    } catch (err) {
+      keyState[idx].inUse = false;
+
+      const status = err.response?.status || 0;
+      const msg = err.message || "";
+
+      // ======================
+      // ⚠ 429 — Cooldown درست بر اساس Rate
+      // ======================
+      if (status === 429 || msg.includes("429")) {
+        const nextSlot = keyState[idx].lastUsed + TTS_MIN_INTERVAL;
+        keyState[idx].cooldownUntil = Math.max(nextSlot, Date.now() + 1000);
+        console.log(`⏸️ کلید ${idx} بن شد تا ${new Date(keyState[idx].cooldownUntil).toISOString()}`);
+      }
+
+      // ======================
+      // ⚠ 403 — 24 ساعت بن
+      // ======================
+      if (status === 403 || msg.includes("403")) {
+        keyState[idx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
+        console.log(`🚫 کلید ${idx} بن ۲۴ ساعته شد`);
+      }
+
+      triedKeys++;
+      if (triedKeys >= totalKeys) {
+        triedKeys = 0;
+        apiKeyIndex = 0;
+      }
+      continue;
+    }
   }
 }
 
-// ==============================
-// RUN REQUEST WITH KEY
-// ==============================
-async function runWithKey(req, res, next, keyIndex) {
-  const st = keyState[keyIndex];
-  const apiKey = API_KEYS[keyIndex];
-
-  st.inUse = true;
-  st.lastUsed = Date.now();
-
-  const { text, voiceName, multiSpeaker } = req.body;
-
-  try {
-    let speechConfig = {};
-
-    if (multiSpeaker && Array.isArray(multiSpeaker)) {
-      speechConfig = {
-        multiSpeakerVoiceConfig: {
-          speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
-            speaker,
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: voiceName || "Kore" }
-            }
-          }))
-        }
-      };
-    } else {
-      speechConfig = {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: voiceName || "Kore" }
-        }
-      };
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text }] }],
-      config: { responseModalities: [Modality.AUDIO], speechConfig }
-    });
-
-    st.inUse = false;
-    st.dailyCount++;
-
-    const parts = response?.candidates?.[0]?.content?.parts || [];
-    const audio = parts.find(p => p.inlineData?.mimeType?.startsWith("audio/"));
-
-    if (!audio) {
-      return res.json({ message: "No audio generated." });
-    }
-
-    return res.json({
-      base64: audio.inlineData.data,
-      mimeType: audio.inlineData.mimeType
-    });
-
-  } catch (err) {
-    st.inUse = false;
-
-    const msg = err.message || "";
-    const status = err.response?.status || 0;
-
-    // ==========================
-    // RATE-LIMIT LOGIC EXACTLY AS TABLE
-    // ==========================
-
-    // ⭐ 429 → cooldown until next valid slot (NOT 1 hour!)
-    if (status === 429 || msg.includes("429")) {
-      const nextSlot = st.lastUsed + MIN_INTERVAL;
-      st.cooldownUntil = Math.max(nextSlot, Date.now() + 1000);
-    }
-
-    // ⭐ 403 → 24hr lock
-    if (status === 403 || msg.includes("403")) {
-      st.cooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
-    }
-
-    next(err);
-  }
-}
-
-// ==============================
-// ROUTE
-// ==============================
-const PRIVATE_KEY = "threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD";
-
-router.post("/", async (req, res, next) => {
-  const clientKey = req.headers["x-api-key"];
-
+// =====================
+// 📌 مسیر POST
+// =====================
+router.post('/', (req, res, next) => {
+  const clientKey = req.headers['x-api-key'];
   if (!clientKey || clientKey !== PRIVATE_KEY) {
-    return res.status(403).json({ error: "Unauthorized" });
+    return res.status(403).json({ error: 'Unauthorized' });
   }
 
   const { text } = req.body;
-  if (!text) {
-    return res.status(400).json({ error: "Invalid text" });
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ error: 'text معتبر نیست.' });
   }
 
-  const idx = await waitForKey();
-  runWithKey(req, res, next, idx);
+  requestQueue.push({ req, res, next });
+  processQueue();
 });
 
-// ==============================
-// GLOBAL ERROR HANDLER
-// ==============================
 router.use((err, req, res, next) => {
-  res.status(500).json({ error: "Server error", detail: err.message });
+  res.status(500).json({ error: 'خطای سرور.' });
 });
 
 export default router;
