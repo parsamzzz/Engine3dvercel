@@ -1,42 +1,68 @@
 import express from 'express';
 import { GoogleGenAI, Modality } from '@google/genai';
-import dotenv from 'dotenv';
-dotenv.config();
 
 const router = express.Router();
 
-// فقط یک کلید از env
-const API_KEY = process.env.GEMINI_TTS_KEY;
+// =====================
+// 🔑 کلید اصلی
+// =====================
+const API_KEY = process.env.API_KEY || "AIzaSyBKHPvD4LzQMb2YzLkBrcI9JNI1mWfYAuM";
 
-// کلید خصوصی
-const PRIVATE_KEY = process.env.CLIENT_PRIVATE_KEY;
 
-// صف درخواست‌ها
+// =====================
+// 🛡 کلید خصوصی کلاینت
+// =====================
+const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
+
+// =====================
+// ⏳ صف + کنترل همزمانی
+// =====================
 const requestQueue = [];
-let processing = false;
+let activeCount = 0;
+const MAX_CONCURRENT = 1;
 
-// =======================
-// پردازش صف هر 2 ثانیه
-// =======================
-setInterval(async () => {
-  if (processing) return;
+// =====================
+// ⏱ Rate Limit (1 req/sec)
+// =====================
+let requestTimestamps = [];
+
+function cleanOldRequests() {
+  const now = Date.now();
+  requestTimestamps = requestTimestamps.filter(ts => now - ts < 1000);
+}
+
+function canProceedRateLimit() {
+  cleanOldRequests();
+  return requestTimestamps.length < 1; // فقط 1 درخواست در هر 1 ثانیه
+}
+
+function recordRequest() {
+  requestTimestamps.push(Date.now());
+}
+
+// =====================
+// 🎛 پردازش صف
+// =====================
+async function processQueue() {
+  if (activeCount >= MAX_CONCURRENT) return;
   if (requestQueue.length === 0) return;
 
   const { req, res, next } = requestQueue.shift();
-  processing = true;
+  activeCount++;
 
   try {
     await handleRequest(req, res, next);
   } catch (err) {
     next(err);
+  } finally {
+    activeCount--;
+    processQueue();
   }
+}
 
-  processing = false;
-}, 2000); // هر دو ثانیه دقیقاً یک درخواست
-
-// =======================
-// تابع اصلی درخواست
-// =======================
+// =====================
+// 🔊 هَندل اصلی تولید صوت
+// =====================
 async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
 
@@ -54,13 +80,13 @@ async function handleRequest(req, res, next) {
       };
     } else {
       speechConfig = {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' }
-        }
+        voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } }
       };
     }
 
     const ai = new GoogleGenAI({ apiKey: API_KEY });
+
+    console.log("🚀 ارسال درخواست به Gemini...");
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-preview-tts',
@@ -69,26 +95,28 @@ async function handleRequest(req, res, next) {
     });
 
     const parts = response.candidates?.[0]?.content?.parts || [];
-    const audioPart = parts.find(p => p.inlineData?.mimeType?.startsWith('audio/'));
+    const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
 
     if (!audioPart) {
-      return res.status(500).json({ error: 'Audio generation failed' });
+      console.warn("⚠️ صوتی تولید نشد!");
+      return res.status(500).json({ error: "صوت تولید نشد." });
     }
 
+    console.log("✅ صوت تولید شد.");
     return res.json({
       base64: audioPart.inlineData.data,
       mimeType: audioPart.inlineData.mimeType
     });
 
   } catch (err) {
-    console.error('❌ Gemini Error:', err);
-    return res.status(500).json({ error: 'Gemini request failed' });
+    console.error("❌ خطا در TTS:", err.message);
+    return res.status(500).json({ error: "خطا در تولید صوت." });
   }
 }
 
-// =======================
-// مسیر POST
-// =======================
+// =====================
+// 📌 مسیر POST
+// =====================
 router.post('/', (req, res, next) => {
   const clientKey = req.headers['x-api-key'];
 
@@ -102,15 +130,24 @@ router.post('/', (req, res, next) => {
     return res.status(400).json({ error: 'text معتبر نیست.' });
   }
 
+  // --- Rate Limit Check ---
+  if (!canProceedRateLimit()) {
+    return res.status(429).json({ error: 'Too Many Requests - لطفا 1 ثانیه بعد تلاش کنید.' });
+  }
+
+  recordRequest();
+
+  // --- Queue + Concurrency ---
   requestQueue.push({ req, res, next });
+  processQueue();
 });
 
-// =======================
-// هندل خطا
-// =======================
+// =====================
+// 📌 هندل خطا
+// =====================
 router.use((err, req, res, next) => {
-  console.error('💥 Internal error:', err);
-  res.status(500).json({ error: 'Server error' });
+  console.error('💥 Unhandled error:', err);
+  res.status(500).json({ error: 'خطای سرور.' });
 });
 
 export default router;
