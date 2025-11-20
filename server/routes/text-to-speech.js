@@ -1,55 +1,42 @@
 import express from 'express';
 import { GoogleGenAI, Modality } from '@google/genai';
 import dotenv from 'dotenv';
-
-// بارگذاری متغیرهای محیطی از فایل .env
 dotenv.config();
 
 const router = express.Router();
 
-// =====================
-// 🔑 کلید API از متغیر محیطی
-// =====================
-const API_KEY = process.env.GOOGLE_API_KEY;
+// فقط یک کلید از env
+const API_KEY = process.env.GEMINI_TTS_KEY;
 
-// =====================
-// 🛡 کلید خصوصی کلاینت
-// =====================
+// کلید خصوصی
 const PRIVATE_KEY = process.env.CLIENT_PRIVATE_KEY;
 
-// =====================
-// ⏳ صف + کنترل همزمانی
-// =====================
+// صف درخواست‌ها
 const requestQueue = [];
-let activeCount = 0;
-const MAX_CONCURRENT = 1;  // فقط یک درخواست همزمان ارسال می‌شود
+let processing = false;
 
-// =====================
-// ⏱ Rate Limit (یک درخواست در هر ثانیه)
-// =====================
-
-function processQueue() {
+// =======================
+// پردازش صف هر 2 ثانیه
+// =======================
+setInterval(async () => {
+  if (processing) return;
   if (requestQueue.length === 0) return;
 
   const { req, res, next } = requestQueue.shift();
-  activeCount++;
+  processing = true;
 
-  // ارسال درخواست بعدی پس از 1 ثانیه
-  setTimeout(async () => {
-    try {
-      await handleRequest(req, res, next);
-    } catch (err) {
-      next(err);
-    } finally {
-      activeCount--;
-      processQueue(); // پردازش درخواست‌های بعدی
-    }
-  }, 2000); // تأخیر 1 ثانیه برای درخواست بعدی
-}
+  try {
+    await handleRequest(req, res, next);
+  } catch (err) {
+    next(err);
+  }
 
-// =====================
-// 🔊 هَندل اصلی تولید صوت
-// =====================
+  processing = false;
+}, 2000); // هر دو ثانیه دقیقاً یک درخواست
+
+// =======================
+// تابع اصلی درخواست
+// =======================
 async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
 
@@ -67,43 +54,41 @@ async function handleRequest(req, res, next) {
       };
     } else {
       speechConfig = {
-        voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } }
+        voiceConfig: {
+          prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' }
+        }
       };
     }
 
     const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-    console.log("🚀 ارسال درخواست به Gemini...");
-
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-preview-tts',
-      contents: [{ parts: [{ text }] }],  // متن درخواست
+      contents: [{ parts: [{ text }] }],
       config: { responseModalities: [Modality.AUDIO], speechConfig }
     });
 
     const parts = response.candidates?.[0]?.content?.parts || [];
-    const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
+    const audioPart = parts.find(p => p.inlineData?.mimeType?.startsWith('audio/'));
 
     if (!audioPart) {
-      console.warn("⚠️ صوتی تولید نشد!");
-      return res.status(500).json({ error: "صوت تولید نشد." });
+      return res.status(500).json({ error: 'Audio generation failed' });
     }
 
-    console.log("✅ صوت تولید شد.");
     return res.json({
       base64: audioPart.inlineData.data,
       mimeType: audioPart.inlineData.mimeType
     });
 
   } catch (err) {
-    console.error("❌ خطا در TTS:", err.message);
-    return res.status(500).json({ error: "خطا در تولید صوت." });
+    console.error('❌ Gemini Error:', err);
+    return res.status(500).json({ error: 'Gemini request failed' });
   }
 }
 
-// =====================
-// 📌 مسیر POST
-// =====================
+// =======================
+// مسیر POST
+// =======================
 router.post('/', (req, res, next) => {
   const clientKey = req.headers['x-api-key'];
 
@@ -117,19 +102,15 @@ router.post('/', (req, res, next) => {
     return res.status(400).json({ error: 'text معتبر نیست.' });
   }
 
-  // اضافه کردن درخواست به صف
   requestQueue.push({ req, res, next });
-
-  // شروع پردازش صف
-  processQueue();
 });
 
-// =====================
-// 📌 هندل خطا
-// =====================
+// =======================
+// هندل خطا
+// =======================
 router.use((err, req, res, next) => {
-  console.error('💥 Unhandled error:', err);
-  res.status(500).json({ error: 'خطای سرور.' });
+  console.error('💥 Internal error:', err);
+  res.status(500).json({ error: 'Server error' });
 });
 
 export default router;
