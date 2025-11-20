@@ -18,7 +18,7 @@ const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
 // =====================
 const requestQueue = [];
 let activeCount = 0;
-const MAX_CONCURRENT = 2;
+const MAX_CONCURRENT = 1;
 
 // =====================
 // ⏱ Rate Limit (2 req/sec)
