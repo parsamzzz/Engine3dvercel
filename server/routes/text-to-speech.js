@@ -39,7 +39,7 @@ const keyState = API_KEYS.map(() => ({
 let apiKeyIndex = 0;
 
 // =====================
-// 📌 انتخاب کلید مناسب
+// 📌 انتخاب کلید
 // =====================
 function getNextAvailableKey() {
   const now = Date.now();
@@ -60,21 +60,10 @@ function getNextAvailableKey() {
       state.lastDayReset = now;
     }
 
-    if (state.perMinuteCount >= 3) {
-      console.log(`⛔ کلید ${idx} محدودیت دقیقه پر (${state.perMinuteCount}/3)`);
-      continue;
-    }
+    if (state.perMinuteCount >= 3) continue;
+    if (state.perDayCount >= 15) continue;
 
-    if (state.perDayCount >= 15) {
-      console.log(`⛔ کلید ${idx} محدودیت روزانه پر (${state.perDayCount}/15)`);
-      continue;
-    }
-
-    if (now < state.cooldownUntil) {
-      const remain = ((state.cooldownUntil - now) / 1000).toFixed(1);
-      console.log(`⏳ کلید ${idx} در cooldown — ${remain} ثانیه مانده`);
-      continue;
-    }
+    if (now < state.cooldownUntil) continue;
 
     if (!state.inUse) {
       state.inUse = true;
@@ -84,14 +73,14 @@ function getNextAvailableKey() {
       apiKeyIndex = (idx + 1) % API_KEYS.length;
 
       console.log(
-        `🔑 کلید ${idx} انتخاب شد | minute=${state.perMinuteCount}/3 | day=${state.perDayCount}/15`
+        `🔑 کلید ${idx} انتخاب شد | min=${state.perMinuteCount}/3 | day=${state.perDayCount}/15`
       );
 
       return { key: API_KEYS[idx], idx };
     }
   }
 
-  console.log("❌ هیچ کلید آماده‌ای پیدا نشد.");
+  console.log("❌ هیچ کلید آزاد وجود ندارد!");
   return null;
 }
 
@@ -107,7 +96,6 @@ async function processQueue() {
 
   while (requestQueue.length > 0) {
     const { req, res, next } = requestQueue.shift();
-    console.log(`📥 درخواست جدید:`, req.body.text?.slice(0, 30));
     try {
       await handleRequest(req, res, next);
     } catch (err) {
@@ -119,10 +107,12 @@ async function processQueue() {
 }
 
 // =====================
-// 📌 هندل اصلی درخواست
+// 📌 هندل اصلی
 // =====================
 async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
+
+  console.log(`📥 دریافت متن: "${text.slice(0, 200)}"`);
 
   let tries = 0;
 
@@ -137,7 +127,7 @@ async function handleRequest(req, res, next) {
     const { key, idx } = keyData;
 
     try {
-      console.log(`🚀 ارسال به Gemini با کلید ${idx}`);
+      console.log(`🚀 ارسال به Gemini با کلید ${idx} | متن: "${text.slice(0, 200)}"`);
 
       let speechConfig = {};
 
@@ -176,11 +166,16 @@ async function handleRequest(req, res, next) {
       keyState[idx].inUse = false;
 
       if (!audioPart) {
-        console.log(`⚠️ ناموفق | کلید ${idx} | صوت پیدا نشد`);
+        console.log(`⚠️ ناموفق | کلید ${idx} | متن: "${text.slice(0, 200)}"`);
         return res.json({ message: "صوتی تولید نشد", parts });
       }
 
-      console.log(`✅ موفق | کلید ${idx} | طول صوت: ${audioPart.inlineData.data.length}`);
+      console.log(
+        `✅ موفق | کلید ${idx} | طول صوت: ${audioPart.inlineData.data.length} | متن: "${text.slice(
+          0,
+          200
+        )}"`
+      );
 
       return res.json({
         base64: audioPart.inlineData.data,
@@ -192,18 +187,21 @@ async function handleRequest(req, res, next) {
 
       const status = err.response?.status || 0;
 
-      console.log(`❌ خطا | کلید ${idx} | status=${status} | msg=${err.message}`);
+      console.log(
+        `❌ خطا | کلید ${idx} | status=${status} | msg=${err.message} | متن: "${text.slice(
+          0,
+          200
+        )}"`
+      );
 
       if (status === 429) {
         keyState[idx].cooldownUntil = Date.now() + ONE_MINUTE;
-        console.log(`⚠️ کلید ${idx} → cooldown 1 دقیقه`);
         tries++;
         continue;
       }
 
       if (status === 400 || status === 403) {
         keyState[idx].cooldownUntil = Date.now() + ONE_DAY;
-        console.log(`⛔ کلید ${idx} → بن 24 ساعت`);
         tries++;
         continue;
       }
