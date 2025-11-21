@@ -248,7 +248,7 @@ async function handleRequest(req, res, next) {
 
   // هندل 429 - محدودیت نرخ
   if (status === 429 || err.message.includes('429')) {
-    keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; // 1 ساعت
+    keyState[idx].cooldownUntil = Date.now() + 1 * 60 * 1000; // 1 ساعت
     console.log(`⏸️ کلید شماره ${idx} در حالت cooldown قرار گرفت (429).`);
     triedKeys++;
     continue;
