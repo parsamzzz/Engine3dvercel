@@ -7,7 +7,7 @@ const router = express.Router();
 // 🔑 همه کلیدها
 // =====================
 const API_KEYS = [
-"AIzaSyCdqSov5Q8XL1Ut0GZT5_4LxjW0ykzL3gI",
+ "AIzaSyCdqSov5Q8XL1Ut0GZT5_4LxjW0ykzL3gI",
 "AIzaSyAgei7FHog7a_4zClil1El9ni86AaMEjnQ",
 "AIzaSyDvRaZrtkWD9hoZYS__Q_4u6y_hViQSl8A",
 "AIzaSyDwr4Onv7C2QCJDnjiVeE3rlopsGzgILpc",
@@ -18,7 +18,6 @@ const API_KEYS = [
 "AIzaSyBOkuNHhhwC-4YRzYuvAzzV8j9X01ycIoA",
 "AIzaSyCEL1shpPWslg59kf4aj4ijuJw7BVhi5lc",
 "AIzaSyDpUQqXWM9-jxuFNnqQZk9S_OGT71PCXao",
-
 "AIzaSyDpfvrTHpFcXDmyeT05BkafCRe1znBxzd4",
 "AIzaSyAb6gJVGPX-BXO8fzoC-DfgBsy2M2dsd-Q",
 "AIzaSyCwTpN5FHx8K9ItxPTO64rVGz_zL45vbRA",
@@ -31,20 +30,6 @@ const API_KEYS = [
 "AIzaSyDo_AsWiI-vOC8hdH45YD3NEM4hQv4RpOI",
 "AIzaSyCDaD6WFhqiCQM3Md35FLi_XFibj2YDSM4",
 "AIzaSyAH6Om23T2mvgjf5fPrL05KaocP2wpi-_w",
-
-
-"AIzaSyD7Yem44WKhsvZ9rqlgslZr3sTaeYFZc4Q",
-"AIzaSyDqrWVVKoBvnLFuDC4u3yCc245QtmJ6qQI",
-"AIzaSyCAmd5YplE3NWAirHBsbzyMLum-pF3b7EA",
-"AIzaSyC112MJoUgx0D2KOABEaYeXETFRLy5TvaA",
-"AIzaSyDvpWmeW9r1WrTI3xSvBogJuMHVLjjK_Po",
-"AIzaSyBS7NlLUNPC0z7-rOC3OYZ8_PiVaxY4XB0",
-"AIzaSyC2a9vOBgoiQjuZ3t6obKFTES8DQKdMKUY",
-"AIzaSyCep6hGUVRLh7J7madzG2Xo8DO-X5dVvdY",
-"AIzaSyAn7CtfHpy_GSd0-YmN-_19UjdXK89Hc0M",
-"AIzaSyBuVbur5GNZs07DhOQFiiILJdjGsg27_EA",
-"AIzaSyBH_tt6G1Bc6UU4I1ZYICbdCEym0CSKPUI",
-
 "AIzaSyCLShNGyoTPtDcZOpzGk6pAQsEA1OBdXEw",
 "AIzaSyAWNAr5iA7xk90uT_mqF849iKg2RD2gqC4",
 "AIzaSyAAVZYJtNm_J8FL_qpBp33hBJLiGoIdGqw",
@@ -56,7 +41,6 @@ const API_KEYS = [
 "AIzaSyAiuXnLA0BEm2SQsaJcOik16ES2FzoYT6E",
 "AIzaSyAqnEYSLKiL_uVxB29XLZs2J4s5H3EATbk",
 "AIzaSyDDVZlmkO4PQ9n6n4B-S9UzrQ34_aNY6VE",
-
 "AIzaSyA4H4Ui7hIdK4UyxEImzUskFqxRIev9HgE",
 "AIzaSyBVfruiFluLgUk9z-TH51JuEJq892oCcLg",
 "AIzaSyBQSbNW7NVrVKwwXxMFX_1d0h1_24Xl0iU",
@@ -67,7 +51,6 @@ const API_KEYS = [
 "AIzaSyB0uPXR1K1-rRjcmA-44wWd7sq7jio2INc",
 "AIzaSyCSRgqduhmZ_hZYhMaPgag3dQmenWybB1Q",
 "AIzaSyCzrlsFAejR_Fy5GrDZrQKf8O_d39_7Luo",
-
 "AIzaSyDz_eT2of8KrTAdfD9g0XLl_Ujy9oi-Zss",
 "AIzaSyD9rBenxfNPM23-a2ZLSkGGdwAv0QJ1NmI",
 "AIzaSyBitBJOCf7ziv-yODUBBDDw4wxLHaUYFbU",
@@ -78,20 +61,7 @@ const API_KEYS = [
 "AIzaSyDZTaC16BnRquzPS8kOakE5TiX6LVlTa2c",
 "AIzaSyDAmZ-_KzczbaAuBo0qrP7el5AdfkBQ1C0",
 "AIzaSyDwjEsq_EHe0ZwXwY8mRfu-Kla_KRdImTo",
-
-
 "AIzaSyC87CPApBGwLFykob6DB4MZ8_pgpceEWA8",
-"AIzaSyDyY8PnrFK4A3n8bOHt87DH6A7f7_coMcM",
-"AIzaSyB4YeboLgLGws0EcyAZRraKpdudipza9Oc",
-"AIzaSyAUk5qpPZp8dMr4gokKAyB-FeCu2EwTVDE",
-"AIzaSyBEwEUEadI2zkyxIk24LVOecl5UFybyRGk",
-"AIzaSyAIi8OQx83RHDYIYzEEb2MrZLZ-5OmiPfQ",
-"AIzaSyAy4bIy5lP3m5ZhBZjBBgqDLien-7XQxAI",
-"AIzaSyDB1aaELkYcpoOxSdvTkNB9GXuyBN6Etck",
-"AIzaSyC7yrGdhbcItjlEs08JGQ5kV0sY-XvcEYw",
-"AIzaSyCldEhSIgiH_BsfTKU1MWrJrJ0fvDNLN_A",
-
-"AIzaSyCHroPZrUzGZBe6SKOr_WKLZDzjajXHBf4",
 "AIzaSyBE9GaVt01PpYKl7qv9muYsVPXTZtTHLII",
 "AIzaSyCA8JntaxkC6b9OLUirs5nvwRvmQvUK7XA",
 "AIzaSyCA8JntaxkC6b9OLUirs5nvwRvmQvUK7XA",
@@ -137,13 +107,11 @@ function getNextAvailableKey() {
     const idx = (apiKeyIndex + i) % API_KEYS.length;
     const state = keyState[idx];
 
-    // ریست دقیقه‌ای
     if (now - state.lastMinuteReset >= ONE_MINUTE) {
       state.perMinuteCount = 0;
       state.lastMinuteReset = now;
     }
 
-    // ریست روزانه
     if (now - state.lastDayReset >= ONE_DAY) {
       state.perDayCount = 0;
       state.lastDayReset = now;
@@ -216,7 +184,8 @@ async function handleRequest(req, res, next) {
     const { key, idx } = keyData;
 
     try {
-      console.log(`🚀 ارسال به Gemini با کلید ${idx} | متن: "${text.slice(0, 200)}"`);
+      // لاگ متن کامل فقط هنگام ارسال
+      console.log(`🚀 ارسال به Gemini با کلید ${idx} | متن کامل: "${text}"`);
 
       let speechConfig = {};
 
@@ -256,7 +225,7 @@ async function handleRequest(req, res, next) {
 
       if (!audioPart) {
         console.log(`⚠️ ناموفق | کلید ${idx} | متن: "${text.slice(0, 200)}"`);
-        return res.json({ message: "صوتی تولید نشد", parts });
+        continue; // سراغ کلید بعدی برو
       }
 
       console.log(
@@ -270,32 +239,24 @@ async function handleRequest(req, res, next) {
         base64: audioPart.inlineData.data,
         mimeType: audioPart.inlineData.mimeType,
       });
-
     } catch (err) {
       keyState[idx].inUse = false;
 
       const status = err.response?.status || 0;
 
+      // لاگ متن کامل در catch
       console.log(
-        `❌ خطا | کلید ${idx} | status=${status} | msg=${err.message} | متن: "${text.slice(
-          0,
-          200
-        )}"`
+        `❌ خطا | کلید ${idx} | status=${status} | msg=${err.message} | متن کامل: "${text}"`
       );
 
       if (status === 429) {
         keyState[idx].cooldownUntil = Date.now() + ONE_MINUTE;
-        tries++;
-        continue;
-      }
-
-      if (status === 400 || status === 403) {
+      } else if (status === 403) {
         keyState[idx].cooldownUntil = Date.now() + ONE_DAY;
-        tries++;
-        continue;
       }
 
-      return next(err);
+      tries++;
+      continue; // سراغ کلید بعدی برو
     }
   }
 
