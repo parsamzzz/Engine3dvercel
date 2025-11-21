@@ -10,7 +10,7 @@ const API_KEYS = [
   "AIzaSyDGLCzb_cDVbhowANVZ8ySkdTseJlJeJ64",
   "AIzaSyD6Q2B2L5ovpsye8sGHGkvUSIWoJMX7zZE",
   "AIzaSyAspaEaYEGPTun96FGL5pfbBPUD7FhhCBA",
-  "AIzaSyBemWdBNZoSYiMUtNR0n7pt0oM6ndAg4Fc",
+  "AIzaSyBemWdBNZoSYiMUtNR0ن7pt0oM6ndAg4Fc",
   "AIzaSyAOd4x9BjJtKNUCrLU-pGMoyemeoTR64aI",
 ];
 
@@ -39,7 +39,7 @@ const keyState = API_KEYS.map(() => ({
 let apiKeyIndex = 0;
 
 // =====================
-// 📌 دنبال کلید سالم
+// 📌 انتخاب کلید مناسب
 // =====================
 function getNextAvailableKey() {
   const now = Date.now();
@@ -48,24 +48,33 @@ function getNextAvailableKey() {
     const idx = (apiKeyIndex + i) % API_KEYS.length;
     const state = keyState[idx];
 
-    // ریست شمارنده دقیقه‌ای
+    // ریست دقیقه‌ای
     if (now - state.lastMinuteReset >= ONE_MINUTE) {
       state.perMinuteCount = 0;
       state.lastMinuteReset = now;
     }
 
-    // ریست شمارنده روزانه
+    // ریست روزانه
     if (now - state.lastDayReset >= ONE_DAY) {
       state.perDayCount = 0;
       state.lastDayReset = now;
     }
 
-    // محدودیت‌ها
-    if (state.perMinuteCount >= 3) continue;
-    if (state.perDayCount >= 15) continue;
+    if (state.perMinuteCount >= 3) {
+      console.log(`⛔ کلید ${idx} محدودیت دقیقه پر (${state.perMinuteCount}/3)`);
+      continue;
+    }
 
-    // cooldown
-    if (now < state.cooldownUntil) continue;
+    if (state.perDayCount >= 15) {
+      console.log(`⛔ کلید ${idx} محدودیت روزانه پر (${state.perDayCount}/15)`);
+      continue;
+    }
+
+    if (now < state.cooldownUntil) {
+      const remain = ((state.cooldownUntil - now) / 1000).toFixed(1);
+      console.log(`⏳ کلید ${idx} در cooldown — ${remain} ثانیه مانده`);
+      continue;
+    }
 
     if (!state.inUse) {
       state.inUse = true;
@@ -75,18 +84,19 @@ function getNextAvailableKey() {
       apiKeyIndex = (idx + 1) % API_KEYS.length;
 
       console.log(
-        `🔑 کلید ${idx} انتخاب شد | دقیقه: ${state.perMinuteCount}/3 | روز: ${state.perDayCount}/15`
+        `🔑 کلید ${idx} انتخاب شد | minute=${state.perMinuteCount}/3 | day=${state.perDayCount}/15`
       );
 
       return { key: API_KEYS[idx], idx };
     }
   }
 
+  console.log("❌ هیچ کلید آماده‌ای پیدا نشد.");
   return null;
 }
 
 // =====================
-// 📌 صف درخواست‌ها
+// 📌 صف
 // =====================
 const requestQueue = [];
 let processingQueue = false;
@@ -97,6 +107,7 @@ async function processQueue() {
 
   while (requestQueue.length > 0) {
     const { req, res, next } = requestQueue.shift();
+    console.log(`📥 درخواست جدید:`, req.body.text?.slice(0, 30));
     try {
       await handleRequest(req, res, next);
     } catch (err) {
@@ -126,6 +137,8 @@ async function handleRequest(req, res, next) {
     const { key, idx } = keyData;
 
     try {
+      console.log(`🚀 ارسال به Gemini با کلید ${idx}`);
+
       let speechConfig = {};
 
       if (Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
@@ -163,26 +176,34 @@ async function handleRequest(req, res, next) {
       keyState[idx].inUse = false;
 
       if (!audioPart) {
+        console.log(`⚠️ ناموفق | کلید ${idx} | صوت پیدا نشد`);
         return res.json({ message: "صوتی تولید نشد", parts });
       }
+
+      console.log(`✅ موفق | کلید ${idx} | طول صوت: ${audioPart.inlineData.data.length}`);
 
       return res.json({
         base64: audioPart.inlineData.data,
         mimeType: audioPart.inlineData.mimeType,
       });
+
     } catch (err) {
       keyState[idx].inUse = false;
 
       const status = err.response?.status || 0;
 
+      console.log(`❌ خطا | کلید ${idx} | status=${status} | msg=${err.message}`);
+
       if (status === 429) {
         keyState[idx].cooldownUntil = Date.now() + ONE_MINUTE;
+        console.log(`⚠️ کلید ${idx} → cooldown 1 دقیقه`);
         tries++;
         continue;
       }
 
       if (status === 400 || status === 403) {
         keyState[idx].cooldownUntil = Date.now() + ONE_DAY;
+        console.log(`⛔ کلید ${idx} → بن 24 ساعت`);
         tries++;
         continue;
       }
@@ -204,8 +225,7 @@ router.post("/", (req, res, next) => {
     return res.status(403).json({ error: "Unauthorized" });
   }
 
-  const { text } = req.body;
-  if (!text || typeof text !== "string") {
+  if (!req.body.text || typeof req.body.text !== "string") {
     return res.status(400).json({ error: "text معتبر نیست" });
   }
 
@@ -215,6 +235,7 @@ router.post("/", (req, res, next) => {
 
 // مدیریت خطا
 router.use((err, req, res) => {
+  console.log("💥 خطای سرور:", err.message);
   res.status(500).json({ error: "خطای سرور" });
 });
 
