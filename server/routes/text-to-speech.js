@@ -166,6 +166,23 @@ async function processQueue() {
 // =====================
 // 📌 هندل اصلی
 // =====================
+// =====================
+// شمارنده صوت موفق 24 ساعته
+// =====================
+let successfulAudioCount = 0;
+let lastResetTime = Date.now();
+
+function resetDailyCounterIfNeeded() {
+  const now = Date.now();
+  if (now - lastResetTime >= ONE_DAY) {
+    successfulAudioCount = 0;
+    lastResetTime = now;
+  }
+}
+
+// =====================
+// هندل اصلی
+// =====================
 async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
 
@@ -182,7 +199,7 @@ async function handleRequest(req, res, next) {
     const { key, idx } = keyData;
 
     try {
-      // 🔹 لاگ متن کامل فقط هنگام ارسال واقعی
+      // لاگ متن کامل فقط هنگام ارسال واقعی
       console.log(`🚀 ارسال به Gemini با کلید ${idx} | متن کامل: "${text}"`);
 
       let speechConfig = {};
@@ -222,14 +239,17 @@ async function handleRequest(req, res, next) {
       keyState[idx].inUse = false;
 
       if (!audioPart) {
-        // 🔹 لاگ کوتاه از ناموفق بودن صوت
         console.log(`⚠️ ناموفق | کلید ${idx} | متن: "${text.slice(0, 200)}"`);
         continue; // سراغ کلید بعدی برو
       }
 
-      // 🔹 لاگ کوتاه موفقیت
+      // 🔹 ریست شمارنده اگر بیش از 24 ساعت گذشته
+      resetDailyCounterIfNeeded();
+      successfulAudioCount++;
+
+      // 🔹 لاگ موفقیت با شماره صوت
       console.log(
-        `✅ موفق | کلید ${idx} | طول صوت: ${audioPart.inlineData.data.length} | متن: "${text.slice(
+        `✅ موفق #${successfulAudioCount} | کلید ${idx} | طول صوت: ${audioPart.inlineData.data.length} | متن: "${text.slice(
           0,
           200
         )}"`
@@ -244,7 +264,6 @@ async function handleRequest(req, res, next) {
 
       const status = err.response?.status || 0;
 
-      // دیگر لاگ متن کامل در catch حذف شد
       if (status === 429) {
         keyState[idx].cooldownUntil = Date.now() + ONE_MINUTE;
       } else if (status === 403) {
@@ -252,7 +271,7 @@ async function handleRequest(req, res, next) {
       }
 
       tries++;
-      continue; // سراغ کلید بعدی برو
+      continue;
     }
   }
 
