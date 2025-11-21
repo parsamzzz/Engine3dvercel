@@ -169,8 +169,6 @@ async function processQueue() {
 async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
 
-  console.log(`📥 دریافت متن: "${text.slice(0, 200)}"`);
-
   let tries = 0;
 
   while (tries < API_KEYS.length) {
@@ -184,7 +182,7 @@ async function handleRequest(req, res, next) {
     const { key, idx } = keyData;
 
     try {
-      // لاگ متن کامل فقط هنگام ارسال
+      // 🔹 لاگ متن کامل فقط هنگام ارسال واقعی
       console.log(`🚀 ارسال به Gemini با کلید ${idx} | متن کامل: "${text}"`);
 
       let speechConfig = {};
@@ -224,10 +222,12 @@ async function handleRequest(req, res, next) {
       keyState[idx].inUse = false;
 
       if (!audioPart) {
+        // 🔹 لاگ کوتاه از ناموفق بودن صوت
         console.log(`⚠️ ناموفق | کلید ${idx} | متن: "${text.slice(0, 200)}"`);
         continue; // سراغ کلید بعدی برو
       }
 
+      // 🔹 لاگ کوتاه موفقیت
       console.log(
         `✅ موفق | کلید ${idx} | طول صوت: ${audioPart.inlineData.data.length} | متن: "${text.slice(
           0,
@@ -244,11 +244,7 @@ async function handleRequest(req, res, next) {
 
       const status = err.response?.status || 0;
 
-      // لاگ متن کامل در catch
-      console.log(
-        `❌ خطا | کلید ${idx} | status=${status} | msg=${err.message} | متن کامل: "${text}"`
-      );
-
+      // دیگر لاگ متن کامل در catch حذف شد
       if (status === 429) {
         keyState[idx].cooldownUntil = Date.now() + ONE_MINUTE;
       } else if (status === 403) {
@@ -262,6 +258,7 @@ async function handleRequest(req, res, next) {
 
   return res.status(503).json({ error: "هیچ کلید سالمی پیدا نشد." });
 }
+
 
 // =====================
 // 📌 مسیر POST
