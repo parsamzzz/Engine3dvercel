@@ -7,11 +7,10 @@ const router = express.Router();
 // 🔑 همه کلیدها
 // =====================
 const API_KEYS = [
-"AIzaSyCkXfkUkwiPZBY6MOLWITSfjv8pmRIkp_Q",
-"AIzaSyDkJMFt6vevs-skTcjyNFz_0du0we0Liho",
-"AIzaSyCHwRPK7hiPCr2E12mSrHuKJsEvETUrNQ4",
-"AIzaSyByafSgVPXixxGoZyLPP8659C3q8rLGqYk"
-
+"AIzaSyAFmfMP2AfrxQFFxXdydCC2CZFOSZch4Jk",
+"AIzaSyAi1Oe0MUI95dJjytLhAcFAxl6Suf0OQE8",
+"AIzaSyAVbaduz-mRwL1ZlRO7ihQ370VrugciVxE",
+"AIzaSyDqIlE5iR0wMHp3kIA5U8o6pDbE0xyam1c"
 
 ];
 
