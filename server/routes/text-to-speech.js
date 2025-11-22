@@ -8,12 +8,10 @@ const router = express.Router();
 // =====================
 const API_KEYS = [
 "AIzaSyDZcivxyeu_ifFSCBu4r02sqt-gbVw-AdQ",
-
 "AIzaSyDGCk_sjdipWugy4Qy6jgibwRLa1NcIhXY",
-
 "AIzaSyBjYI8jXBlI7MqV0bygEm46--jFggc9t4w",
-
 "AIzaSyAvp1qniK0Kt9_2YrwZ6C2R8UGwI519OsQ",
+
 ];
 
 // =====================
@@ -125,15 +123,15 @@ function resetDailyCounterIfNeeded() {
 
 // =====================
 // هندل اصلی
-// =====================
 async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
 
-  for (let tries = 0; tries < API_KEYS.length; tries++) {
+  let tries = 0;
+
+  while (tries < API_KEYS.length) {
     const keyData = getNextAvailableKey();
 
     if (!keyData) {
-      console.log("⏳ هیچ کلید آزادی نیست، صبر می‌کنیم...");
       await new Promise((r) => setTimeout(r, 200));
       continue;
     }
@@ -141,9 +139,9 @@ async function handleRequest(req, res, next) {
     const { key, idx } = keyData;
 
     try {
-      console.log(`🚀 ارسال به Gemini با کلید ${idx}`);
+      // لاگ متن کامل فقط هنگام ارسال واقعی
+      console.log(`🚀 ارسال به Gemini با کلید ${idx} | متن کامل: "${text}"`);
 
-      // ------ تنظیمات صدا ------
       let speechConfig = {};
 
       if (Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
@@ -173,47 +171,60 @@ async function handleRequest(req, res, next) {
         config: { responseModalities: [Modality.AUDIO], speechConfig },
       });
 
-      keyState[idx].inUse = false;
-
-      // ------ پردازش صوت ------
-      const parts = response.candidates?.[0]?.content?.parts || [];
+      const parts =
+        response.candidates?.[0]?.content?.parts || [];
       const audioPart = parts.find((p) =>
         p.inlineData?.mimeType?.startsWith("audio/")
       );
 
+      keyState[idx].inUse = false;
+
       if (!audioPart) {
-        console.log(`⚠️ صوت تولید نشد | کلید ${idx}`);
-        return res.status(500).json({ error: "Audio not returned" });
+        console.log(
+          `⚠️ ناموفق | کلید ${idx} | متن: "${text.slice(0, 200)}"`
+        );
+        continue; // سراغ کلید بعدی برو
       }
 
-      console.log(`✅ موفقیت با کلید ${idx}`);
+      // 🔹 ریست شمارنده اگر بیش از 24 ساعت گذشته
+      resetDailyCounterIfNeeded();
+      successfulAudioCount++;
+
+      // 🔹 لاگ موفقیت با شماره صوت
+      console.log(
+        `✅ موفق #${successfulAudioCount} | کلید ${idx} | طول صوت: ${
+          audioPart.inlineData.data.length
+        } | متن: "${text.slice(0, 200)}"`
+      );
 
       return res.json({
         base64: audioPart.inlineData.data,
         mimeType: audioPart.inlineData.mimeType,
       });
-
     } catch (err) {
       keyState[idx].inUse = false;
 
       const status = err.response?.status || 0;
 
-      // فقط 403 و 429 → تست کلید بعدی
+      // 🔥 فقط همین دوتا خطا باعث می‌شوند کلید بعدی تست شود
       if (status === 429) {
-        console.log(`⚠️ 429 روی کلید ${idx} → رفتیم کلید بعدی`);
         keyState[idx].cooldownUntil = Date.now() + ONE_MINUTE;
-        continue;
+        console.log(`⏳ کلید ${idx} → 429 → cooldown یک دقیقه`);
+      } else if (status === 403) {
+        keyState[idx].cooldownUntil = Date.now() + ONE_DAY;
+        console.log(`⛔ کلید ${idx} → 403 → cooldown یک روز`);
+      } else {
+        // ❗ هر خطای دیگر → خروج کامل، چون نباید چرخش کند
+        console.log(`❌ خطای غیرقابل ادامه (${status}) روی کلید ${idx}:`, err.message);
+        return res.status(500).json({
+          error: "خطای غیرقابل بازیابی از سمت گوگل",
+          status,
+          message: err.message
+        });
       }
 
-      if (status === 403) {
-        console.log(`⛔ 403 روی کلید ${idx} → کلید بن شد، کلید بعدی`);
-        keyState[idx].cooldownUntil = Date.Now() + ONE_DAY;
-        continue;
-      }
-
-      // هر ارور دیگر → مستقیم خروجی بده
-      console.log(`💥 خطای غیرمجاز روی کلید ${idx}:`, status);
-      return res.status(500).json({ error: "Server error", detail: err.message });
+      tries++;
+      continue;
     }
   }
 
