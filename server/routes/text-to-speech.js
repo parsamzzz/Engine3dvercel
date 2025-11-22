@@ -7,16 +7,16 @@ const router = express.Router();
 // 🔑 همه کلیدها
 // =====================
 const API_KEYS = [
-"AIzaSyB21YSz9XC3G347okhxY0DmxeqnfOXyU00",
-"AIzaSyB9-7P52tf_OodoDkDpl65YhuhEtQdPMKM",
-"AIzaSyBJB5rNbO7AMtQtLyn-mt4_zK0lV8t-TLI",
-"AIzaSyCsXUltjTBL3BEKHdewyjkn6LPa-96jafg",
-"AIzaSyCbGDqlaJNqIBBdBYHwbmGl28HvGMKHbbk",
-"AIzaSyAlhKGLRywZVkC2FacHn3pt8s5nuF4p2kA",
-"AIzaSyDAC7Yosa2yXdZeZlwtfkOrAwcKDGpDAz0",
-"AIzaSyBuPmDTeyrzTqQLvbaNA8lCWrv-q69n4c0",
-"AIzaSyAWB-dly9-jOhGj_XhrXSRRt7oPL1Wb3CY",
-"AIzaSyBWB7qG9z2x4OlxxLwarusw_K5vXnbDTzg"
+"AIzaSyAa2VsTjm9uMcmKGZUX-mc0-Fv8fN1NZEw",
+"AIzaSyD3FDM4JsNV9HXSEBdszKBFD7I_Q2i0tRY",
+"AIzaSyAh0WeiUzWW5ebS7l4ZsdU177AaZ5CFHac",
+"AIzaSyAh0WeiUzWW5ebS7l4ZsdU177AaZ5CFHac",
+"AIzaSyBIAaNrM1Vnh0vjUHdkkUxPB6zLZcTaYno",
+"AIzaSyDLEuUDjr0QVEVa2N6EAwzVK5pWjAuz5vI",
+"AIzaSyBc5YEP53Qi8veNWiHPa_cgBYzVFfq8DOY",
+"AIzaSyDKynBrgXS7I58GgDlHReUywjvUcf3a9Rw",
+"AIzaSyDlTNWfL1qCBBqVe-BwjcIWiv2Qgs2qwhM",
+"AIzaSyAFPBMAKpVhtj-rzIcB0fW5JAIWiglZ2-g",
 ];
 
 // =====================
