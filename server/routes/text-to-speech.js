@@ -7,11 +7,27 @@ const router = express.Router();
 // 🔑 همه کلیدها
 // =====================
 const API_KEYS = [
-"AIzaSyDm5buHWbTEHUeufYCzZ1nnmiJsT0Nek8k",
-"AIzaSyDB8A4cMsxrgQ4cJteD_QIdbLQhyVtKYNo",
-"AIzaSyCMRTFMDd4VQ9dXjNiJLuzdM6Fo_a4yRAQ",
-"AIzaSyCCdgzELNZx8gHzEG_csXpXZi3e7-dtl-g",
-"AIzaSyC-rdrtYr9IU_oOhqXYDwAo6n0pWIfx88o"
+"AIzaSyC6m0zt2GkhKxCy6RUGxHDw1jiqDGKQHaI",
+"AIzaSyBi87dUlg5Fgd_pJEzrxfqfDU-mi0IbGr0",
+"AIzaSyDYUdEd5ZTpiZMYeqdaJFONbYJDeH03YmE",
+"AIzaSyBL9vJZsv7atPpccl4Vx9YPpIH_fPgrTOw",
+"AIzaSyACarZjqAJuJ3YK-bNbB71mvaBRpd80PGk",
+"AIzaSyD5tVMAGFIJGZ9DPmCb2RnD8YRk3c3Z9BA",
+"AIzaSyDSfeAqPgsnMZ2_Kn82Nue6z12waQtBJk4",
+"AIzaSyAqCHj_WTvYGoSaSRh8R-9rGTsrYYsDw9Q",
+"AIzaSyDFyRf0RAgbUcj_ZkDp3jXR2bg_Ogtl-rM",
+"AIzaSyBGj244s0b7_hqdRz_vJQJ_fc4afv-hcT0",
+"AIzaSyCrRTDAX9t1ZPCdCfnIWBzWHKUHnDEb0P4",
+"AIzaSyDC_uNyUjoeFqVEcoy7qqhq0MHB2EUHjIk",
+"AIzaSyCxI33tLbrlWJz8COSHvjutOjFo4i8-LCM",
+"AIzaSyDcBAkCRbnXX_wVdxQTgOsVIDbhLY-ZQ7I",
+"AIzaSyBkfHnFVSYpFhJiQoXzsxnb-dNws3tUqzc",
+"AIzaSyCLFBAjuLS5xN_RhsKbA-MtpcfKvRXUwVA",
+"AIzaSyDtDEq7NN4mDLEt8nv3sbkY43rBYHNEW-E",
+"AIzaSyA_u5UsFj_wcesBTJxa3FVkU0nP7aeYUCo",
+"AIzaSyAHMnpoFUJBmFMESD7IYvKmCo1LEJCj1-g",
+"AIzaSyD_H0ilyNx3S3imY3uUhbRbBNPvPSHQaHs",
+"AIzaSyDZSz6eB5ExEYmo0UujfhE3-KBjia0Y5Kw",
 
 ];
 
@@ -59,8 +75,8 @@ function getNextAvailableKey() {
       state.lastDayReset = now;
     }
 
-    if (state.perMinuteCount >= 3) continue;
-    if (state.perDayCount >= 15) continue;
+    if (state.perMinuteCount >= 10) continue;
+    if (state.perDayCount >= 100) continue;
 
     if (now < state.cooldownUntil) continue;
 
