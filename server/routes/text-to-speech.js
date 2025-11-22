@@ -1,13 +1,13 @@
-import express from "express";
-import { GoogleGenAI, Modality } from "@google/genai";
+import express from 'express';
+import { GoogleGenAI, Modality } from '@google/genai';
 
 const router = express.Router();
 
 // =====================
-// 🔑 همه کلیدها (تعداد کلیدها می‌تواند بیشتر باشد)
+// 🔑 همه کلیدها
 // =====================
 const API_KEYS = [
-"AIzaSyAhud0Y08odo3QkR6tn0QTPNVCtlgWhQnk",
+  "AIzaSyAhud0Y08odo3QkR6tn0QTPNVCtlgWhQnk",
 "AIzaSyB7jAI-1FHYATMTQIH3YkD7kIuIm7o2-lo",
 "AIzaSyA416fx5gbHbbHsHYEK6RAqtyvTCSvdNjw",
 "AIzaSyA6dLEJ1YxJLG2gRMoD9egKagMiV0Biu3o",
@@ -19,189 +19,174 @@ const API_KEYS = [
 // =====================
 // 🛡 کلید خصوصی کلاینت
 // =====================
-const PRIVATE_KEY = "threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD";
+const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
+
+// وضعیت کلیدها
+const keyState = API_KEYS.map(() => ({ cooldownUntil: 0, inUse: false }));
+let apiKeyIndex = 0;
+
+// صف درخواست‌ها
+const requestQueue = [];
+let processingQueue = false;
 
 // =====================
-// 📌 محدودیت‌ها و وضعیت کلیدها
-// =====================
-const ONE_MINUTE = 60 * 1000;
-const ONE_DAY = 24 * 60 * 60 * 1000;
-
-const keyState = API_KEYS.map(() => ({
-  cooldownUntil: 0,
-  perMinuteCount: 0,
-  perDayCount: 0,
-  lastMinuteReset: Date.now(),
-  lastDayReset: Date.now(),
-  inUse: false,
-}));
-
-// =====================
-// 🔹 شمارنده موفقیت 24 ساعته
-// =====================
-let successfulAudioCount = 0;
-let lastResetTime = Date.now();
-
-function resetDailyCounterIfNeeded() {
-  const now = Date.now();
-  if (now - lastResetTime >= ONE_DAY) {
-    successfulAudioCount = 0;
-    lastResetTime = now;
-  }
-}
-
-// =====================
-// 📌 انتخاب کلید موجود و آزاد
+// 📌 انتخاب کلید سالم
 // =====================
 function getNextAvailableKey() {
-  const now = Date.now();
-
-  for (let i = 0; i < API_KEYS.length; i++) {
-    const idx = (apiKeyIndex + i) % API_KEYS.length;
+  const totalKeys = API_KEYS.length;
+  for (let i = 0; i < totalKeys; i++) {
+    const idx = (apiKeyIndex + i) % totalKeys;
     const state = keyState[idx];
-
-    // ریست محدودیت دقیقه و روز
-    if (now - state.lastMinuteReset >= ONE_MINUTE) {
-      state.perMinuteCount = 0;
-      state.lastMinuteReset = now;
+    if (!state.inUse && Date.now() > state.cooldownUntil) {
+      apiKeyIndex = (idx + 1) % totalKeys;
+      state.inUse = true;
+      console.log(`🔑 کلید انتخاب شد: ${keyState[idx] ? idx : 'نامشخص'} - ${API_KEYS[idx].substring(0, 10)}...`);
+      return { key: API_KEYS[idx], idx };
     }
-    if (now - state.lastDayReset >= ONE_DAY) {
-      state.perDayCount = 0;
-      state.lastDayReset = now;
-    }
-
-    if (state.perMinuteCount >= 10 || state.perDayCount >= 100) continue;
-    if (now < state.cooldownUntil) continue;
-    if (state.inUse) continue;
-
-    state.inUse = true;
-    state.perMinuteCount++;
-    state.perDayCount++;
-
-    apiKeyIndex = (idx + 1) % API_KEYS.length;
-    return { key: API_KEYS[idx], idx };
   }
-
-  return null; // هیچ کلید آزاد نیست
+  console.warn('⚠️ هیچ کلید آزاد در دسترس نیست، در صف منتظر مانده‌ایم.');
+  return null;
 }
 
 // =====================
-// 📌 هندل درخواست‌ها
+// 📌 پردازش صف
+// =====================
+async function processQueue() {
+  if (processingQueue) return;
+  processingQueue = true;
+
+  while (requestQueue.length > 0) {
+    const { req, res, next } = requestQueue.shift();
+    console.log(`📥 پردازش درخواست جدید - IP: ${req.ip}, body:`, req.body);
+    try {
+      await handleRequest(req, res, next);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  processingQueue = false;
+}
+
+// =====================
+// 📌 تابع اصلی درخواست
 // =====================
 async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
+  const totalKeys = API_KEYS.length;
+  let triedKeys = 0;
 
-  let tries = 0;
-
-  while (tries < API_KEYS.length) {
+  while (triedKeys < totalKeys) {
     const keyData = getNextAvailableKey();
-
     if (!keyData) {
-      // اگر هیچ کلید آزاد نیست کمی صبر کن
-      await new Promise((r) => setTimeout(r, 200));
+      console.log('⏳ صبر برای کلید آزاد...');
+      await new Promise(r => setTimeout(r, 100)); // کمی صبر کن و دوباره امتحان کن
       continue;
     }
 
     const { key, idx } = keyData;
 
     try {
-      console.log(`🚀 ارسال به Gemini با کلید ${idx} | متن: "${text}"`);
-
       let speechConfig = {};
-      if (Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
+      if (multiSpeaker && Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
         speechConfig = {
           multiSpeakerVoiceConfig: {
             speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
               speaker,
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: voiceName || "Kore" },
-              },
-            })),
-          },
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } }
+            }))
+          }
         };
       } else {
-        speechConfig = {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: voiceName || "Kore" },
-          },
-        };
+        speechConfig = { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } } };
       }
 
       const ai = new GoogleGenAI({ apiKey: key });
+      console.log(`🚀 ارسال درخواست به Gemini با کلید شماره ${idx}`);
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: 'gemini-2.5-flash-preview-tts',
         contents: [{ parts: [{ text }] }],
-        config: { responseModalities: [Modality.AUDIO], speechConfig },
+        config: { responseModalities: [Modality.AUDIO], speechConfig }
       });
 
       const parts = response.candidates?.[0]?.content?.parts || [];
-      const audioPart = parts.find((p) =>
-        p.inlineData?.mimeType?.startsWith("audio/")
-      );
+      const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
 
       keyState[idx].inUse = false;
 
-      if (!audioPart) {
-        console.log(`⚠️ ناموفق | کلید ${idx} | متن: "${text.slice(0, 200)}"`);
-        tries++;
-        continue;
-      }
-
-      resetDailyCounterIfNeeded();
-      successfulAudioCount++;
-
-      console.log(
-        `✅ موفق #${successfulAudioCount} | کلید ${idx} | طول صوت: ${audioPart.inlineData.data.length} | متن: "${text.slice(
-          0,
-          200
-        )}"`
-      );
-
-      return res.json({
-        base64: audioPart.inlineData.data,
-        mimeType: audioPart.inlineData.mimeType,
-      });
-    } catch (err) {
-      keyState[idx].inUse = false;
-
-      const status = err.response?.status || 0;
-      if (status === 429) {
-        console.log(`⏱ کلید ${idx} محدودیت دقیقه رسید، 1 دقیقه cool down شد`);
-        keyState[idx].cooldownUntil = Date.now() + ONE_MINUTE;
-      } else if (status === 403) {
-        console.log(`🚫 کلید ${idx} محدودیت روز رسید، تا فردا غیر فعال شد`);
-        keyState[idx].cooldownUntil = Date.now() + ONE_DAY;
+      if (audioPart?.inlineData?.data) {
+        console.log(`✅ موفقیت: صوت تولید شد با کلید شماره ${idx}`);
+        return res.json({ base64: audioPart.inlineData.data, mimeType: audioPart.inlineData.mimeType });
       } else {
-        console.log(`❌ خطا با کلید ${idx} | متن: "${text.slice(0, 200)}" | خطا: ${err.message}`);
+        console.warn(`⚠️ صوتی تولید نشد با کلید شماره ${idx}`);
+        return res.status(200).json({ message: 'صوتی تولید نشد.', parts });
       }
 
-      tries++;
-      continue;
-    }
+ } catch (err) {
+  keyState[idx].inUse = false;
+  console.error(`❌ خطا با کلید شماره ${idx}:`, err.message);
+
+  const status = err.response?.status || 0;
+
+  // هندل 429 - محدودیت نرخ
+  if (status === 429 || err.message.includes('429')) {
+    keyState[idx].cooldownUntil = Date.now() + 60 * 60 * 1000; // 1 ساعت
+    console.log(`⏸️ کلید شماره ${idx} در حالت cooldown قرار گرفت (429).`);
+    triedKeys++;
+    continue;
   }
 
-  return res.status(503).json({ error: "هیچ کلید سالمی پیدا نشد." });
+  if (status === 403 || err.message.includes('403')) {
+    keyState[idx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000; 
+    console.warn(`🚫 کلید شماره ${idx} غیرفعال شد (403). کلید بعدی امتحان می‌شود.`);
+    triedKeys++;
+    continue;
+  }
+
+    if (status === 400 || err.message.includes('400')) {
+    keyState[idx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000; 
+    console.warn(`🚫 کلید شماره ${idx} غیرفعال شد (400). کلید بعدی امتحان می‌شود.`);
+    triedKeys++;
+    continue;
+  }
+
+
+ 
+  return next(err);
+}
+
+  }
+
+  console.error('❌ هیچ‌کدام از کلیدها موفق نشد.');
+  res.status(503).json({ error: 'هیچ‌کدام از کلیدها موفق نشد.' });
 }
 
 // =====================
 // 📌 مسیر POST
 // =====================
-router.post("/", (req, res, next) => {
-  const clientKey = req.headers["x-api-key"];
+router.post('/', (req, res, next) => {
+  const clientKey = req.headers['x-api-key'];
+  console.log(`📩 درخواست POST دریافت شد - IP: ${req.ip}, x-api-key: ${clientKey ? '✔️ موجود' : '❌ ندارد'}`);
+
   if (!clientKey || clientKey !== PRIVATE_KEY) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
-  if (!req.body.text || typeof req.body.text !== "string") {
-    return res.status(400).json({ error: "text معتبر نیست" });
+    console.warn('⚠️ کلید خصوصی معتبر نیست.');
+    return res.status(403).json({ error: 'Unauthorized' });
   }
 
-  handleRequest(req, res, next);
+  const { text } = req.body;
+  if (!text || typeof text !== 'string' || text.trim() === '') {
+    console.warn('⚠️ متن نامعتبر است.');
+    return res.status(400).json({ error: 'text معتبر نیست.' });
+  }
+
+  requestQueue.push({ req, res, next });
+  processQueue();
 });
 
 // مدیریت خطا
-router.use((err, req, res) => {
-  console.log("💥 خطای سرور:", err.message);
-  res.status(500).json({ error: "خطای سرور" });
+router.use((err, req, res, next) => {
+  console.error('💥 Unhandled error:', err);
+  res.status(500).json({ error: 'خطای سرور.' });
 });
 
 export default router;
