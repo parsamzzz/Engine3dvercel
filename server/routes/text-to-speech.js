@@ -88,7 +88,7 @@ function getNextAvailableKey() {
       apiKeyIndex = (idx + 1) % API_KEYS.length;
 
       console.log(
-        `🔑 کلید ${idx} انتخاب شد | min=${state.perMinuteCount}/3 | day=${state.perDayCount}/15`
+        `🔑 کلید ${idx} انتخاب شد | min=${state.perMinuteCount}/10 | day=${state.perDayCount}/100`
       );
 
       return { key: API_KEYS[idx], idx };
