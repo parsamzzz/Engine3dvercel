@@ -132,18 +132,21 @@ async function handleRequest(req, res, next) {
     const keyData = getNextAvailableKey();
 
     if (!keyData) {
+      // اگر هیچ کلید آزاد نبود، کمی صبر کن و دوباره امتحان کن
       await new Promise((r) => setTimeout(r, 200));
       continue;
     }
 
     const { key, idx } = keyData;
+    const state = keyState[idx];
 
     try {
-      // لاگ متن کامل فقط هنگام ارسال واقعی
       console.log(`🚀 ارسال به Gemini با کلید ${idx} | متن کامل: "${text}"`);
 
+      // ------------------------
+      // تنظیمات صدا
+      // ------------------------
       let speechConfig = {};
-
       if (Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
         speechConfig = {
           multiSpeakerVoiceConfig: {
@@ -163,6 +166,9 @@ async function handleRequest(req, res, next) {
         };
       }
 
+      // ------------------------
+      // ارسال درخواست به Google Gemini
+      // ------------------------
       const ai = new GoogleGenAI({ apiKey: key });
 
       const response = await ai.models.generateContent({
@@ -171,51 +177,46 @@ async function handleRequest(req, res, next) {
         config: { responseModalities: [Modality.AUDIO], speechConfig },
       });
 
-      const parts =
-        response.candidates?.[0]?.content?.parts || [];
+      const parts = response.candidates?.[0]?.content?.parts || [];
       const audioPart = parts.find((p) =>
         p.inlineData?.mimeType?.startsWith("audio/")
       );
 
-      keyState[idx].inUse = false;
-
       if (!audioPart) {
-        console.log(
-          `⚠️ ناموفق | کلید ${idx} | متن: "${text.slice(0, 200)}"`
-        );
-        continue; // سراغ کلید بعدی برو
+        console.log(`⚠️ ناموفق | کلید ${idx} | متن: "${text.slice(0, 200)}"`);
+        tries++;
+        continue;
       }
 
-      // 🔹 ریست شمارنده اگر بیش از 24 ساعت گذشته
+      // ------------------------
+      // شمارنده موفقیت
+      // ------------------------
       resetDailyCounterIfNeeded();
       successfulAudioCount++;
 
-      // 🔹 لاگ موفقیت با شماره صوت
       console.log(
-        `✅ موفق #${successfulAudioCount} | کلید ${idx} | طول صوت: ${
-          audioPart.inlineData.data.length
-        } | متن: "${text.slice(0, 200)}"`
+        `✅ موفق #${successfulAudioCount} | کلید ${idx} | طول صوت: ${audioPart.inlineData.data.length}`
       );
 
       return res.json({
         base64: audioPart.inlineData.data,
         mimeType: audioPart.inlineData.mimeType,
       });
-    } catch (err) {
-      keyState[idx].inUse = false;
 
+    } catch (err) {
       const status = err.response?.status || 0;
 
-      // 🔥 فقط همین دوتا خطا باعث می‌شوند کلید بعدی تست شود
+      console.log(`❌ خطا روی کلید ${idx} | Status: ${status}`);
+
+      // فقط خطاهای 429 و 403 باعث می‌شوند سراغ کلید بعدی برویم
       if (status === 429) {
-        keyState[idx].cooldownUntil = Date.now() + ONE_MINUTE;
-        console.log(`⏳ کلید ${idx} → 429 → cooldown یک دقیقه`);
+        state.cooldownUntil = Date.now() + ONE_MINUTE;
+        console.log(`⏳ کلید ${idx} → cooldown 1 دقیقه`);
       } else if (status === 403) {
-        keyState[idx].cooldownUntil = Date.now() + ONE_DAY;
-        console.log(`⛔ کلید ${idx} → 403 → cooldown یک روز`);
+        state.cooldownUntil = Date.now() + ONE_DAY;
+        console.log(`⛔ کلید ${idx} → cooldown 1 روز`);
       } else {
-        // ❗ هر خطای دیگر → خروج کامل، چون نباید چرخش کند
-        console.log(`❌ خطای غیرقابل ادامه (${status}) روی کلید ${idx}:`, err.message);
+        // خطاهای دیگر → پاسخ 500
         return res.status(500).json({
           error: "خطای غیرقابل بازیابی از سمت گوگل",
           status,
@@ -228,6 +229,7 @@ async function handleRequest(req, res, next) {
     }
   }
 
+  // هیچ کلید سالمی پیدا نشد
   return res.status(503).json({ error: "هیچ کلید سالمی پیدا نشد." });
 }
 
