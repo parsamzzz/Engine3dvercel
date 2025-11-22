@@ -7,28 +7,19 @@ const router = express.Router();
 // 🔑 همه کلیدها
 // =====================
 const API_KEYS = [
-"AIzaSyC6m0zt2GkhKxCy6RUGxHDw1jiqDGKQHaI",
-"AIzaSyBi87dUlg5Fgd_pJEzrxfqfDU-mi0IbGr0",
-"AIzaSyDYUdEd5ZTpiZMYeqdaJFONbYJDeH03YmE",
-"AIzaSyBL9vJZsv7atPpccl4Vx9YPpIH_fPgrTOw",
-"AIzaSyACarZjqAJuJ3YK-bNbB71mvaBRpd80PGk",
-"AIzaSyD5tVMAGFIJGZ9DPmCb2RnD8YRk3c3Z9BA",
-"AIzaSyDSfeAqPgsnMZ2_Kn82Nue6z12waQtBJk4",
-"AIzaSyAqCHj_WTvYGoSaSRh8R-9rGTsrYYsDw9Q",
-"AIzaSyDFyRf0RAgbUcj_ZkDp3jXR2bg_Ogtl-rM",
-"AIzaSyBGj244s0b7_hqdRz_vJQJ_fc4afv-hcT0",
-"AIzaSyCrRTDAX9t1ZPCdCfnIWBzWHKUHnDEb0P4",
-"AIzaSyDC_uNyUjoeFqVEcoy7qqhq0MHB2EUHjIk",
-"AIzaSyCxI33tLbrlWJz8COSHvjutOjFo4i8-LCM",
-"AIzaSyDcBAkCRbnXX_wVdxQTgOsVIDbhLY-ZQ7I",
-"AIzaSyBkfHnFVSYpFhJiQoXzsxnb-dNws3tUqzc",
-"AIzaSyCLFBAjuLS5xN_RhsKbA-MtpcfKvRXUwVA",
-"AIzaSyDtDEq7NN4mDLEt8nv3sbkY43rBYHNEW-E",
-"AIzaSyA_u5UsFj_wcesBTJxa3FVkU0nP7aeYUCo",
-"AIzaSyAHMnpoFUJBmFMESD7IYvKmCo1LEJCj1-g",
-"AIzaSyD_H0ilyNx3S3imY3uUhbRbBNPvPSHQaHs",
-"AIzaSyDZSz6eB5ExEYmo0UujfhE3-KBjia0Y5Kw",
+"AIzaSyDZcivxyeu_ifFSCBu4r02sqt-gbVw-AdQ"
 
+"AIzaSyDGCk_sjdipWugy4Qy6jgibwRLa1NcIhXY"
+
+"AIzaSyBjYI8jXBlI7MqV0bygEm46--jFggc9t4w"
+
+"AIzaSyAvp1qniK0Kt9_2YrwZ6C2R8UGwI519OsQ"
+
+
+
+
+
+"
 ];
 
 // =====================
@@ -144,12 +135,11 @@ function resetDailyCounterIfNeeded() {
 async function handleRequest(req, res, next) {
   const { text, multiSpeaker, voiceName } = req.body;
 
-  let tries = 0;
-
-  while (tries < API_KEYS.length) {
+  for (let tries = 0; tries < API_KEYS.length; tries++) {
     const keyData = getNextAvailableKey();
 
     if (!keyData) {
+      console.log("⏳ هیچ کلید آزادی نیست، صبر می‌کنیم...");
       await new Promise((r) => setTimeout(r, 200));
       continue;
     }
@@ -157,9 +147,9 @@ async function handleRequest(req, res, next) {
     const { key, idx } = keyData;
 
     try {
-      // لاگ متن کامل فقط هنگام ارسال واقعی
-      console.log(`🚀 ارسال به Gemini با کلید ${idx} | متن کامل: "${text}"`);
+      console.log(`🚀 ارسال به Gemini با کلید ${idx}`);
 
+      // ------ تنظیمات صدا ------
       let speechConfig = {};
 
       if (Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
@@ -189,52 +179,53 @@ async function handleRequest(req, res, next) {
         config: { responseModalities: [Modality.AUDIO], speechConfig },
       });
 
+      keyState[idx].inUse = false;
+
+      // ------ پردازش صوت ------
       const parts = response.candidates?.[0]?.content?.parts || [];
       const audioPart = parts.find((p) =>
         p.inlineData?.mimeType?.startsWith("audio/")
       );
 
-      keyState[idx].inUse = false;
-
       if (!audioPart) {
-        console.log(`⚠️ ناموفق | کلید ${idx} | متن: "${text.slice(0, 200)}"`);
-        continue; // سراغ کلید بعدی برو
+        console.log(`⚠️ صوت تولید نشد | کلید ${idx}`);
+        return res.status(500).json({ error: "Audio not returned" });
       }
 
-      // 🔹 ریست شمارنده اگر بیش از 24 ساعت گذشته
-      resetDailyCounterIfNeeded();
-      successfulAudioCount++;
-
-      // 🔹 لاگ موفقیت با شماره صوت
-      console.log(
-        `✅ موفق #${successfulAudioCount} | کلید ${idx} | طول صوت: ${audioPart.inlineData.data.length} | متن: "${text.slice(
-          0,
-          200
-        )}"`
-      );
+      console.log(`✅ موفقیت با کلید ${idx}`);
 
       return res.json({
         base64: audioPart.inlineData.data,
         mimeType: audioPart.inlineData.mimeType,
       });
+
     } catch (err) {
       keyState[idx].inUse = false;
 
       const status = err.response?.status || 0;
 
+      // فقط 403 و 429 → تست کلید بعدی
       if (status === 429) {
+        console.log(`⚠️ 429 روی کلید ${idx} → رفتیم کلید بعدی`);
         keyState[idx].cooldownUntil = Date.now() + ONE_MINUTE;
-      } else if (status === 403) {
-        keyState[idx].cooldownUntil = Date.now() + ONE_DAY;
+        continue;
       }
 
-      tries++;
-      continue;
+      if (status === 403) {
+        console.log(`⛔ 403 روی کلید ${idx} → کلید بن شد، کلید بعدی`);
+        keyState[idx].cooldownUntil = Date.Now() + ONE_DAY;
+        continue;
+      }
+
+      // هر ارور دیگر → مستقیم خروجی بده
+      console.log(`💥 خطای غیرمجاز روی کلید ${idx}:`, status);
+      return res.status(500).json({ error: "Server error", detail: err.message });
     }
   }
 
   return res.status(503).json({ error: "هیچ کلید سالمی پیدا نشد." });
 }
+
 
 
 // =====================
