@@ -6,7 +6,7 @@ import fs from 'fs';
 const router = express.Router();
 const upload = multer({ dest: 'tmp/' });
 
-const GEMINI_API_KEY = "AIzaSyDlA9tgjJtVQX7FnPsnQH39ZThH5fNk5fg";
+const GEMINI_API_KEY = "AIzaSyAxBVwul1FuQarq6L62M_EGr2MQIXMeXNA";
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
 // حافظه موقت برای وضعیت عملیات
