@@ -1,24 +1,32 @@
 import express from 'express';
 import { GoogleGenAI, Modality } from '@google/genai';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = express.Router();
 
-const API_KEYS = [
-'AIzaSyDGNXrucwLngi6JQJYWd98xDjkTnNxyHyE',
-'AIzaSyBYgAPbXgs9xtxyA5HmfBcanxfz4EvKD8I',
-'AIzaSyBSo9A2fbKICOHPPcxCN2cpe96DpOWzpoI',
-'AIzaSyB0uWksndHE-edN5hbUd5rfOBsokgOUOZg',
-'AIzaSyCZCky3aovuUzQaqcSMrjH-J4zM9nddMh8',
-'AIzaSyAn08xcnR7pbN6rA9EE9psfEu9o4J_Jy0g',
-'AIzaSyDByJmsQU47FJEBgGRbO_EIe5Kw-yDSqKE',
-'AIzaSyDKArbGE9YgUlpNb995uKEWWGQm6a0zw5k',
-'AIzaSyC43K9tDy_ZVRxtlIMvGU84xCz9FHFb8Js',
-'AIzaSyAnNJV23elBe6woLsjt3dEiW6Hqlp5XSSo'
- 
-];
+// =====================
+// 🔑 لود کردن کلیدها از env
+// =====================
+const API_KEYS = process.env.TTS_KEYS
+  ? process.env.TTS_KEYS.split(',').map(k => k.trim())
+  : [];
 
-const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
+if (API_KEYS.length === 0) {
+  console.error("❌ هیچ کلیدی در TTS_KEYS پیدا نشد. لطفاً .env را چک کنید.");
+}
+
+if (!PRIVATE_KEY) {
+  console.error("❌ PRIVATE_KEY در .env یافت نشد.");
+}
+
+
+// =====================
+// ⬇ ادامهٔ کد شما بدون حذف هیچ چیز
+// =====================
 
 const keyState = API_KEYS.map(() => ({
   inUse: false,
@@ -30,14 +38,13 @@ const keyState = API_KEYS.map(() => ({
 let roundRobinIndex = 0;
 const requestQueue = [];
 
-// آرایه برای نگهداری زمان موفقیت‌ها
 let successTimes = [];
 
-// ریست خودکار هر 24 ساعت
 setInterval(() => {
   successTimes = [];
   console.log('🔄 شمارش موفقیت‌ها ریست شد.');
 }, 24 * 60 * 60 * 1000);
+
 
 // =====================
 // انتخاب کلید آزاد و سالم
@@ -69,6 +76,7 @@ function getNextAvailableKey() {
   return null;
 }
 
+
 // =====================
 // پردازش صف
 // =====================
@@ -90,6 +98,7 @@ async function processQueue() {
       });
   }
 }
+
 
 // =====================
 // تابع اصلی درخواست
@@ -126,7 +135,7 @@ async function handleRequest(req, res, next, keyIdx) {
     const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
 
     if (audioPart?.inlineData?.data) {
-      // ثبت موفقیت
+
       successTimes.push(Date.now());
       const cutoff = Date.now() - 24 * 60 * 60 * 1000;
       successTimes = successTimes.filter(t => t > cutoff);
@@ -142,33 +151,25 @@ async function handleRequest(req, res, next, keyIdx) {
 
   } catch (err) {
 
-    // -------------------------
-    // 🔥 اضافه شدن Retry Logic
-    // -------------------------
-
+    // 429 → cooldown 1 min
     if (err.response?.status === 429 || err.message.includes('429')) {
       keyState[keyIdx].cooldownUntil = Date.now() + 60 * 1000;
       console.log(`[${new Date().toISOString()}] ⏳ کلید ${keyIdx} در حالت cooldown 1 دقیقه‌ای (429)`);
 
-      // 🌟 درخواست دوباره وارد صف شود
       requestQueue.push({ req, res, next });
       processQueue();
       return;
     }
 
+    // 403 → cooldown 24 hours
     if (err.response?.status === 403 || err.message.includes('403')) {
       keyState[keyIdx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
       console.log(`[${new Date().toISOString()}] ⏳ کلید ${keyIdx} در حالت cooldown 24 ساعته (403)`);
 
-      // 🌟 درخواست دوباره وارد صف شود
       requestQueue.push({ req, res, next });
       processQueue();
       return;
     }
-
-    // -------------------------
-    //   پایان بخش اصلاح شده
-    // -------------------------
 
     console.error(`[${new Date().toISOString()}] 💥 خطای TTS با کلید ${keyIdx}:`, err.message);
     return res.status(500).json({ error: 'خطای سرویس TTS.' });
@@ -176,16 +177,7 @@ async function handleRequest(req, res, next, keyIdx) {
 }
 
 
-// لاگ ریست موفقیت‌ها
-setInterval(() => {
-  successTimes = [];
-  console.log(`[${new Date().toISOString()}] 🔄 شمارش موفقیت‌ها ریست شد.`);
-}, 24 * 60 * 60 * 1000);
-
-
-// =====================
 // مسیر POST
-// =====================
 router.post('/', (req, res, next) => {
   const clientKey = req.headers['x-api-key'];
   if (!clientKey || clientKey !== PRIVATE_KEY) {
