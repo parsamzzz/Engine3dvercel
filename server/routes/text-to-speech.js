@@ -4,12 +4,18 @@ import { GoogleGenAI, Modality } from '@google/genai';
 const router = express.Router();
 
 const API_KEYS = [
-'AIzaSyDLlvMYWErzyNvdkCNAou-6mpUZwMUhMcs',
-'AIzaSyDlj4htDejX6l23GMgon3jxatnvCEQmre0',
-'AIzaSyAgONs02WZ2LLcjhmZ8Ua3xLsawd6CVVnE',
-'AIzaSyDrxrqWDbXQ7KMDYNUSxgQwrNgKrRuag1o',
-'AIzaSyBWLXIdM_IKFKHJ7mx-mU9luiphB532nkU',
-'AIzaSyCaee9lO78r-pg2R7OsE5svymhJqMSwzxs'
+'AIzaSyA9DaWf4bnQ7gjU28oH9XOm0szQ532MgsU',
+'AIzaSyCUc2_0PBtqqxDZf_CujlIJHxu3O6nUR-Y',
+'AIzaSyD8NEk7bgstXS3tKjAyM_U2dcBtwo7bxhk',
+'AIzaSyCH-tcysJHwjOmI4_cKKwQ1fW9QN1KhHuA',
+'AIzaSyDODO3QjpetM64FzIvwLa-9YvxqqsX9jzE',
+'AIzaSyBaTixkFWXf1-ymoIutUFuHe73hq4UWg1k',
+'AIzaSyC4w6_xnvARx8O-_bpX3HIywJcsJi7WHN0',
+'AIzaSyCaP1cUV4zKsHmvsaUjvMtlJCEw702OVDg',
+'AIzaSyBTvgd9F6aIM3v5-MdR7KQo-92piYQD5xk',
+'AIzaSyCjxYa9DwVbl11_LGIUT3jJjrUG98NwIOI',
+'AIzaSyDur6BVp93kwB15XUJO7SE2r0XRwQcXecU'
+
 ];
 
 const PRIVATE_KEY = 'threedify_7Vg5NqXk29Lz3MwYcPfBTr84sD';
