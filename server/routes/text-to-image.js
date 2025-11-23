@@ -7,7 +7,7 @@ const router = express.Router();
 // 🔑 همه کلیدها
 // =====================
 const API_KEYS = [
-"AIzaSyAxBVwul1FuQarq6L62M_EGr2MQIXMeXNA"
+"AIzaSyCTruTqaNJl-H20yXv9PYaxua-K5KmcfKM"
 
 ];
 

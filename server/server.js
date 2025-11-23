@@ -116,7 +116,7 @@ const BASE_PROMPT = `تو دستیار هوشمند تریدیفای هستی و
 
 
 const API_KEYS = [
- "AIzaSyAxBVwul1FuQarq6L62M_EGr2MQIXMeXNA"
+ "AIzaSyCTruTqaNJl-H20yXv9PYaxua-K5KmcfKM"
 ];
 
 let currentKeyIndex = 0;
