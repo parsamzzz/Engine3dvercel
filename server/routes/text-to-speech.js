@@ -4,16 +4,18 @@ import { GoogleGenAI, Modality } from '@google/genai';
 const router = express.Router();
 
 const API_KEYS = [
-"AIzaSyCbRXjFQQHzl5swyoBg5H0i6akuW2wwJ1k",
-"AIzaSyC8WlPpByxi3IUK2g4BGS79VPoxOJNwJvU",
-"AIzaSyA_5TheDoOiKhyX4e6RFbOTlcrnch2aJgo",
+
 "AIzaSyCdx3y2VPOXRtIpSB03m5AKJgD6OVVi8Ck",
 "AIzaSyDUXFCDHxYCQrK47J7wVW5YE-jaymNeJs8",
 "AIzaSyCrvw38yeypczPz-KLN26cLYZtt0EopaWA",
 "AIzaSyCRELXVgcyzEgZvMFKSiXA7ApbtbbaFeCY",
 "AIzaSyAIdUqaHfwXkODZoUoiIotth1AG5hx7w-4",
 "AIzaSyBzjeRdok8-IZKkK_zC2LS9x7D68t5NHO0",
-"AIzaSyCpWlG8RDYDhfNzLU8MBaQRa4-H9LRdfWU"
+"AIzaSyCpWlG8RDYDhfNzLU8MBaQRa4-H9LRdfWU",
+"AIzaSyAOwDH6OqJDIhB3pbKH3er3lihUsWU1hOg",
+"AIzaSyCZPhufiJoWmoxHumzP3Cw4Lwe2hbn5ev8",
+"AIzaSyBynlHDNblcOIYFv2Uv3IsfypjPA7_Kg3k",
+"AIzaSyD7EErA4-zEL-_gW9eNL_IYtFKgcbkkzBc",
 
 
 ];
