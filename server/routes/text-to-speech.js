@@ -4,16 +4,17 @@ import { GoogleGenAI, Modality } from '@google/genai';
 const router = express.Router();
 
 const API_KEYS = [
-"AIzaSyBAzy4UJndPsMtnNYJ8u5ms-1ok217Phx4",
-"AIzaSyDO72aK4bq37dH-Kjmc3puZg0DYY1Bd84k",
-"AIzaSyC24TRMmd1obDc8yKs0Ni1JmyyifUvfCuQ",
-"AIzaSyDzIEJodmQqWnMsyQz3Z0R2wVUj6Gujyg8",
-"AIzaSyBbIfiKjbWDBa9Ra9MbBwZefC4UmTBR_DA",
-"AIzaSyA6R2dQI-1UdUpawjuNeb5g3cS2-sR2LqY",
-"AIzaSyD2XEczaMLkKC3aTAtnFPvYBgGftJYTpUA",
-"AIzaSyDPquWBiGFRJ3fH8goUrv2ZTtrGoLfibIU",
-"AIzaSyBs8w1BR82vGBoOwE5s0hQkfx-gzmSv21M",
-"AIzaSyBIlFn1qqcsCK8P2TBjliwsHqz6LCO4kYE"
+"AIzaSyAVYRTQ2US9olBdnDnV5n0CSppRJVKIs0I",
+"AIzaSyA-pvFAVTtiZT_exnGnO2KmlhnhBfVRWKM",
+"AIzaSyBo34_7gTlLbwSMNKvjwELyzbkHjkHpZQQ",
+"AIzaSyAkaIWTifAo66BdPfDaJ8BZvfq-jvzaXIw",
+"AIzaSyAtSv782T3E4hUIcnNTyowhwmHaRoWEKBg",
+"AIzaSyBm7bWFjdcm1A33yj3-2WkYfH2W9dV9mew",
+"AIzaSyAdrisr-xJucL6yLwsPi9jFRB6BlWXs9Y0",
+"AIzaSyAn1CpZA_VnNK_mVu2KHLD5a107Rxs7hcw",
+"AIzaSyBIkOxrZI9h7Rpq20oHLSEbNwrz_mMt9V8",
+"AIzaSyDkrenAORGnSCO0Xvgbui-D3ViNfw2qOj8",
+"AIzaSyBZ5dX69ePxdvAN8OaqtKPy9N7o9ZfM08k"
 
 ];
 
