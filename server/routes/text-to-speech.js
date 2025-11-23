@@ -5,18 +5,18 @@ const router = express.Router();
 
 const API_KEYS = [
 
-"AIzaSyCdx3y2VPOXRtIpSB03m5AKJgD6OVVi8Ck",
-"AIzaSyDUXFCDHxYCQrK47J7wVW5YE-jaymNeJs8",
-"AIzaSyCrvw38yeypczPz-KLN26cLYZtt0EopaWA",
-"AIzaSyCRELXVgcyzEgZvMFKSiXA7ApbtbbaFeCY",
-"AIzaSyAIdUqaHfwXkODZoUoiIotth1AG5hx7w-4",
-"AIzaSyBzjeRdok8-IZKkK_zC2LS9x7D68t5NHO0",
-"AIzaSyCpWlG8RDYDhfNzLU8MBaQRa4-H9LRdfWU",
-"AIzaSyAOwDH6OqJDIhB3pbKH3er3lihUsWU1hOg",
-"AIzaSyCZPhufiJoWmoxHumzP3Cw4Lwe2hbn5ev8",
-"AIzaSyBynlHDNblcOIYFv2Uv3IsfypjPA7_Kg3k",
-"AIzaSyD7EErA4-zEL-_gW9eNL_IYtFKgcbkkzBc",
-
+"AIzaSyBE_wNip_vrXhCT0-6NLxlXFFJO7KeK9wk",
+"AIzaSyCTruTqaNJl-H20yXv9PYaxua-K5KmcfKM",
+"AIzaSyBAzy4UJndPsMtnNYJ8u5ms-1ok217Phx4",
+"AIzaSyDO72aK4bq37dH-Kjmc3puZg0DYY1Bd84k",
+"AIzaSyC24TRMmd1obDc8yKs0Ni1JmyyifUvfCuQ",
+"AIzaSyDzIEJodmQqWnMsyQz3Z0R2wVUj6Gujyg8",
+"AIzaSyBbIfiKjbWDBa9Ra9MbBwZefC4UmTBR_DA",
+"AIzaSyA6R2dQI-1UdUpawjuNeb5g3cS2-sR2LqY",
+"AIzaSyD2XEczaMLkKC3aTAtnFPvYBgGftJYTpUA",
+"AIzaSyDPquWBiGFRJ3fH8goUrv2ZTtrGoLfibIU",
+"AIzaSyBs8w1BR82vGBoOwE5s0hQkfx-gzmSv21M",
+"AIzaSyBIlFn1qqcsCK8P2TBjliwsHqz6LCO4kYE"
 
 ];
 
