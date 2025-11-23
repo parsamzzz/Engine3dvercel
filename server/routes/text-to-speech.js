@@ -1,4 +1,4 @@
-منطق این کد اگر 10 درخوسات همزمان بیاد جگونه است import express from 'express';
+import express from 'express';
 import { GoogleGenAI, Modality } from '@google/genai';
 
 const router = express.Router();
