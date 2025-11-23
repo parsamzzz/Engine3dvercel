@@ -141,18 +141,40 @@ async function handleRequest(req, res, next, keyIdx) {
     }
 
   } catch (err) {
+
+    // -------------------------
+    // 🔥 اضافه شدن Retry Logic
+    // -------------------------
+
     if (err.response?.status === 429 || err.message.includes('429')) {
       keyState[keyIdx].cooldownUntil = Date.now() + 60 * 1000;
       console.log(`[${new Date().toISOString()}] ⏳ کلید ${keyIdx} در حالت cooldown 1 دقیقه‌ای (429)`);
-    } else if (err.response?.status === 403 || err.message.includes('403')) {
+
+      // 🌟 درخواست دوباره وارد صف شود
+      requestQueue.push({ req, res, next });
+      processQueue();
+      return;
+    }
+
+    if (err.response?.status === 403 || err.message.includes('403')) {
       keyState[keyIdx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
       console.log(`[${new Date().toISOString()}] ⏳ کلید ${keyIdx} در حالت cooldown 24 ساعته (403)`);
+
+      // 🌟 درخواست دوباره وارد صف شود
+      requestQueue.push({ req, res, next });
+      processQueue();
+      return;
     }
+
+    // -------------------------
+    //   پایان بخش اصلاح شده
+    // -------------------------
 
     console.error(`[${new Date().toISOString()}] 💥 خطای TTS با کلید ${keyIdx}:`, err.message);
     return res.status(500).json({ error: 'خطای سرویس TTS.' });
   }
 }
+
 
 // لاگ ریست موفقیت‌ها
 setInterval(() => {
