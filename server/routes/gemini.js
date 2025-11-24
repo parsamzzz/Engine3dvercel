@@ -4,102 +4,82 @@ import mime from 'mime-types';
 import { GoogleGenAI, Modality } from '@google/genai';
 import dotenv from 'dotenv';
 
-dotenv.config(); // بارگذاری متغیرهای محیطی
+dotenv.config();
 
 const router = express.Router();
 const upload = multer();
 
 // =====================
-// 🔑 کلید از .env
+// 🔑 کلیدها از .env
 // =====================
 const API_KEY = process.env.GOOGLE_GENAI_KEY;
-
-// =====================
-// 🛡 کلید خصوصی کلاینت
-// =====================
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
 // =====================
-// Aspect Ratio → Resolution
+// محدودیت‌های Gemini 2.5 Flash Image 🍌
 // =====================
-const ASPECT_TO_RESOLUTION = {
-  '1:1': { width: 1024, height: 1024 },
-  '2:3': { width: 832, height: 1248 },
-  '3:2': { width: 1248, height: 832 },
-  '3:4': { width: 864, height: 1184 },
-  '4:3': { width: 1184, height: 864 },
-  '4:5': { width: 896, height: 1152 },
-  '5:4': { width: 1152, height: 896 },
-  '9:16': { width: 768, height: 1344 },
-  '16:9': { width: 1344, height: 768 },
-  '21:9': { width: 1536, height: 672 },
-};
+const RPM_LIMIT = 500;       // Requests per minute
+const RPD_LIMIT = 2000;      // Requests per day
 
-// =====================
-// وضعیت کلید و صف
-// =====================
-let processingQueue = false;
-const requestQueue = [];
+let requestsThisMinute = 0;
+let requestsToday = 0;
 
-// =====================
-// پردازش صف
-// =====================
-async function processQueue() {
-  if (processingQueue) return;
-  processingQueue = true;
+// ریست شمارنده دقیقه‌ای هر دقیقه
+setInterval(() => {
+  requestsThisMinute = 0;
+}, 60 * 1000);
 
-  while (requestQueue.length > 0) {
-    const { req, res, next } = requestQueue.shift();
-    try {
-      await handleRequest(req, res, next);
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  processingQueue = false;
+// ریست شمارنده روزانه هر نیمه شب Pacific Time
+function resetDailyCounter() {
+  const now = new Date();
+  const nextReset = new Date(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+    8, 0, 0, 0 // midnight PT = UTC 08:00
+  );
+  if (now > nextReset) nextReset.setUTCDate(nextReset.getUTCDate() + 1);
+  setTimeout(() => {
+    requestsToday = 0;
+    resetDailyCounter();
+  }, nextReset - now);
 }
+resetDailyCounter();
 
 // =====================
-// پردازش درخواست با Aspect Ratio
+// پردازش درخواست با لاگ کامل
 // =====================
 async function handleRequest(req, res, next) {
-  const { prompt, aspectRatio = '1:1' } = req.body;
+  const { prompt, aspectRatio } = req.body;
   const file = req.file;
   const base64Image = file.buffer.toString('base64');
   const mimeType = mime.lookup(file.originalname) || file.mimetype;
 
-  const resolution = ASPECT_TO_RESOLUTION[aspectRatio];
-  if (!resolution) {
-    return res.status(400).json({ error: 'Aspect Ratio معتبر نیست.' });
-  }
-
   console.info(`🔹 پردازش درخواست جدید. prompt: "${prompt.substring(0, 50)}..."`);
   console.info(`🗝️ استفاده از کلید: ${API_KEY.substring(0, 10)}...`);
-  console.info(`📐 رزولوشن انتخاب شده بر اساس Aspect Ratio (${aspectRatio}): ${resolution.width}x${resolution.height}`);
 
   try {
     const ai = new GoogleGenAI({ apiKey: API_KEY });
+
+    const config = { responseModalities: [Modality.IMAGE, Modality.TEXT] };
+    if (aspectRatio) {
+      config.imageConfig = { aspectRatio };
+    }
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: [
         { text: prompt },
         { inlineData: { mimeType, data: base64Image } }
       ],
-      config: { 
-        responseModalities: [Modality.TEXT, Modality.IMAGE],
-        imageConfig: {
-          width: resolution.width,
-          height: resolution.height
-        }
-      }
+      config
     });
 
     const parts = response.candidates?.[0]?.content?.parts || [];
     const imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
 
     if (imagePart?.inlineData?.data) {
-      console.log(`✅ عکس به عکس تولید شد.`);
+      console.log(`✅ تصویر تولید شد.`);
       return res.json({ base64: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType });
     } else {
       console.warn('⚠️ تصویری در پاسخ Gemini پیدا نشد.');
@@ -112,9 +92,9 @@ async function handleRequest(req, res, next) {
 }
 
 // =====================
-// مسیر POST با لاگ
+// مسیر POST با محدودیت RPM و RPD
 // =====================
-router.post('/', upload.single('image'), (req, res, next) => {
+router.post('/', upload.single('image'), async (req, res, next) => {
   const clientKey = req.headers['x-api-key'];
   if (!clientKey || clientKey !== PRIVATE_KEY) {
     console.warn('🛑 دسترسی غیرمجاز.');
@@ -132,9 +112,22 @@ router.post('/', upload.single('image'), (req, res, next) => {
     return res.status(400).json({ error: '⛔ تصویر آپلود نشده است.' });
   }
 
-  console.info('➡️ درخواست به صف اضافه شد.');
-  requestQueue.push({ req, res, next });
-  processQueue();
+  // کنترل RPM
+  if (requestsThisMinute >= RPM_LIMIT) {
+    console.warn('⚠️ سقف درخواست‌های دقیقه‌ای Gemini 2.5 Flash Image پر شد.');
+    return res.status(429).json({ error: '⛔ تعداد درخواست‌های دقیقه‌ای بیش از حد مجاز است، لطفاً کمی صبر کنید.' });
+  }
+
+  // کنترل RPD
+  if (requestsToday >= RPD_LIMIT) {
+    console.warn('⚠️ سقف درخواست‌های روزانه Gemini 2.5 Flash Image پر شد.');
+    return res.status(429).json({ error: '⛔ تعداد درخواست‌های روزانه بیش از حد مجاز است.' });
+  }
+
+  requestsThisMinute++;
+  requestsToday++;
+
+  await handleRequest(req, res, next);
 });
 
 // Middleware مدیریت خطا
