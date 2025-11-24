@@ -20,6 +20,22 @@ const API_KEY = process.env.GOOGLE_GENAI_KEY;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
 // =====================
+// Aspect Ratio → Resolution
+// =====================
+const ASPECT_TO_RESOLUTION = {
+  '1:1': { width: 1024, height: 1024 },
+  '2:3': { width: 832, height: 1248 },
+  '3:2': { width: 1248, height: 832 },
+  '3:4': { width: 864, height: 1184 },
+  '4:3': { width: 1184, height: 864 },
+  '4:5': { width: 896, height: 1152 },
+  '5:4': { width: 1152, height: 896 },
+  '9:16': { width: 768, height: 1344 },
+  '16:9': { width: 1344, height: 768 },
+  '21:9': { width: 1536, height: 672 },
+};
+
+// =====================
 // وضعیت کلید و صف
 // =====================
 let processingQueue = false;
@@ -45,26 +61,38 @@ async function processQueue() {
 }
 
 // =====================
-// پردازش درخواست با لاگ کامل
+// پردازش درخواست با Aspect Ratio
 // =====================
 async function handleRequest(req, res, next) {
-  const { prompt } = req.body;
+  const { prompt, aspectRatio = '1:1' } = req.body;
   const file = req.file;
   const base64Image = file.buffer.toString('base64');
   const mimeType = mime.lookup(file.originalname) || file.mimetype;
 
+  const resolution = ASPECT_TO_RESOLUTION[aspectRatio];
+  if (!resolution) {
+    return res.status(400).json({ error: 'Aspect Ratio معتبر نیست.' });
+  }
+
   console.info(`🔹 پردازش درخواست جدید. prompt: "${prompt.substring(0, 50)}..."`);
   console.info(`🗝️ استفاده از کلید: ${API_KEY.substring(0, 10)}...`);
+  console.info(`📐 رزولوشن انتخاب شده بر اساس Aspect Ratio (${aspectRatio}): ${resolution.width}x${resolution.height}`);
 
   try {
     const ai = new GoogleGenAI({ apiKey: API_KEY });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-2.5-flash-image',
       contents: [
         { text: prompt },
         { inlineData: { mimeType, data: base64Image } }
       ],
-      config: { responseModalities: [Modality.TEXT, Modality.IMAGE] }
+      config: { 
+        responseModalities: [Modality.TEXT, Modality.IMAGE],
+        imageConfig: {
+          width: resolution.width,
+          height: resolution.height
+        }
+      }
     });
 
     const parts = response.candidates?.[0]?.content?.parts || [];
