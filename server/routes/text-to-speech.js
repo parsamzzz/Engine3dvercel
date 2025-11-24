@@ -103,6 +103,23 @@ async function processQueue() {
 // =====================
 // تابع اصلی درخواست
 // =====================
+// تابع کمکی برای پایان روز در Pacific Time
+function getEndOfDayPacificTimestamp() {
+  const now = new Date();
+
+  // گرفتن تاریخ به Pacific Time
+  const options = { timeZone: 'America/Los_Angeles', hour12: false };
+  const pacificYear = now.toLocaleString('en-US', { ...options, year: 'numeric' });
+  const pacificMonth = now.toLocaleString('en-US', { ...options, month: '2-digit' });
+  const pacificDate = now.toLocaleString('en-US', { ...options, day: '2-digit' });
+
+  // 12 شب PT فردا
+  const pacificEnd = new Date(`${pacificYear}-${pacificMonth}-${pacificDate}T00:00:00-07:00`);
+  pacificEnd.setDate(pacificEnd.getDate() + 1);
+
+  return pacificEnd.getTime();
+}
+
 async function handleRequest(req, res, next, keyIdx) {
   const { text, multiSpeaker, voiceName } = req.body;
   const key = API_KEYS[keyIdx];
@@ -135,7 +152,6 @@ async function handleRequest(req, res, next, keyIdx) {
     const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
 
     if (audioPart?.inlineData?.data) {
-
       successTimes.push(Date.now());
       const cutoff = Date.now() - 24 * 60 * 60 * 1000;
       successTimes = successTimes.filter(t => t > cutoff);
@@ -151,20 +167,27 @@ async function handleRequest(req, res, next, keyIdx) {
 
   } catch (err) {
 
-    // 429 → cooldown 1 min
+    // 429 → غیرفعال تا پایان روز Pacific Time
     if (err.response?.status === 429 || err.message.includes('429')) {
-      keyState[keyIdx].cooldownUntil = Date.now() + 60 * 1000;
-      console.log(`[${new Date().toISOString()}] ⏳ کلید ${keyIdx} در حالت cooldown 1 دقیقه‌ای (429)`);
+      const endOfDayPT = getEndOfDayPacificTimestamp();
+      keyState[keyIdx].cooldownUntil = endOfDayPT;
+
+      console.log(
+        `[${new Date().toISOString()}] ⏳ کلید ${keyIdx} تا پایان امروز PT (${new Date(endOfDayPT).toLocaleString()}) غیرفعال شد (429)`
+      );
 
       requestQueue.push({ req, res, next });
       processQueue();
       return;
     }
 
-    // 403 → cooldown 24 hours
+    // 403 → غیرفعال‌سازی دائمی کلید
     if (err.response?.status === 403 || err.message.includes('403')) {
-      keyState[keyIdx].cooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
-      console.log(`[${new Date().toISOString()}] ⏳ کلید ${keyIdx} در حالت cooldown 24 ساعته (403)`);
+      keyState[keyIdx].cooldownUntil = Infinity;
+
+      console.log(
+        `[${new Date().toISOString()}] ⛔ کلید ${keyIdx} برای همیشه غیر فعال شد (403)`
+      );
 
       requestQueue.push({ req, res, next });
       processQueue();
@@ -175,6 +198,7 @@ async function handleRequest(req, res, next, keyIdx) {
     return res.status(500).json({ error: 'خطای سرویس TTS.' });
   }
 }
+
 
 
 // مسیر POST
