@@ -167,6 +167,17 @@ async function handleRequest(req, res, next, keyIdx) {
 
   } catch (err) {
 
+    // ⛔ 400 → اشکال در ورودی، ولی مثل 403 و 429 باید بره سراغ کلید بعدی
+    if (err.response?.status === 400 || err.message.includes('400')) {
+      console.log(
+        `[${new Date().toISOString()}] ⚠️ خطای 400 با کلید ${keyIdx} → پرش به کلید بعدی`
+      );
+
+      requestQueue.push({ req, res, next });
+      processQueue();
+      return;
+    }
+
     // 429 → غیرفعال تا پایان روز Pacific Time
     if (err.response?.status === 429 || err.message.includes('429')) {
       const endOfDayPT = getEndOfDayPacificTimestamp();
@@ -198,6 +209,7 @@ async function handleRequest(req, res, next, keyIdx) {
     return res.status(500).json({ error: 'خطای سرویس TTS.' });
   }
 }
+
 
 
 
