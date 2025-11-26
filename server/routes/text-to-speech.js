@@ -165,20 +165,41 @@ async function handleRequest(req, res, next, keyIdx) {
       return res.status(200).json({ message: 'صوتی تولید نشد.', parts });
     }
 
- } catch (err) {
+} catch (err) {
 
-  // 429 → غیرفعال تا پایان روز Pacific Time
-  if (err.response?.status === 429 || err.message.includes('429')) {
+  const errMsg = err.message || '';
+
+  // ==========================
+  // 🆕 خطای ByteString (ارزش 8207)
+  // ==========================
+  if (errMsg.includes('ByteString') || errMsg.includes('8207')) {
+    keyState[keyIdx].cooldownUntil = Infinity; // غیر فعال دائمی
+    console.log(
+      `[${new Date().toISOString()}] ⛔ کلید ${keyIdx} غیرفعال شد (ByteString Error 8207)`
+    );
+
+    // درخواست را به صف برگردانیم
+    requestQueue.push({ req, res, next });
+    processQueue();
+    return;
+  }
+
+  // ==========================
+  // 429 → تا پایان روز PT غیرفعال
+  // ==========================
+  if (err.response?.status === 429 || errMsg.includes('429')) {
     keyState[keyIdx].cooldownUntil = getEndOfDayPacificTimestamp();
-    console.log(`[... 429 log ...]`);
+    console.log(`[${new Date().toISOString()}] ⛔ کلید ${keyIdx} تا پایان روز PT غیرفعال شد (429)`);
 
     requestQueue.push({ req, res, next });
     processQueue();
     return;
   }
 
-  // 400 → غیرفعال‌سازی دائمی کلید
-  if (err.response?.status === 400 || err.message.includes('400')) {
+  // ==========================
+  // 400 → غیرفعال دائمی
+  // ==========================
+  if (err.response?.status === 400 || errMsg.includes('400')) {
     keyState[keyIdx].cooldownUntil = Infinity;
     console.log(
       `[${new Date().toISOString()}] ⛔ کلید ${keyIdx} برای همیشه غیر فعال شد (400)`
@@ -189,19 +210,25 @@ async function handleRequest(req, res, next, keyIdx) {
     return;
   }
 
-  // 403 → غیرفعال‌سازی دائمی کلید
-  if (err.response?.status === 403 || err.message.includes('403')) {
+  // ==========================
+  // 403 → غیرفعال دائمی
+  // ==========================
+  if (err.response?.status === 403 || errMsg.includes('403')) {
     keyState[keyIdx].cooldownUntil = Infinity;
-    console.log(`[... 403 log ...]`);
+    console.log(`[${new Date().toISOString()}] ⛔ کلید ${keyIdx} برای همیشه غیر فعال شد (403)`);
 
     requestQueue.push({ req, res, next });
     processQueue();
     return;
   }
 
-  console.error(`[TTS Error key ${keyIdx}]:`, err.message);
+  // ==========================
+  // خطای عمومی
+  // ==========================
+  console.error(`[TTS Error key ${keyIdx}]:`, errMsg);
   return res.status(500).json({ error: 'خطای سرویس TTS.' });
 }
+
 
 }
 

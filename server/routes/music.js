@@ -10,7 +10,7 @@ const API_KEY = process.env.MUSICGTP_API_KEY;
 
 // اگر API key تنظیم نشده باشد، لاگ خطا
 if (!API_KEY) {
-  console.error("❌ ENV ERROR: MUSIC_GPT_KEY is missing in .env file");
+  console.error("❌ ERROR:  ");
 }
 
 /* 🎵 ساخت موزیک با MusicAI */
