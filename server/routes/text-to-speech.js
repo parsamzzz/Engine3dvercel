@@ -196,19 +196,7 @@ async function handleRequest(req, res, next, keyIdx) {
     return;
   }
 
-  // ==========================
-  // 400 → غیرفعال دائمی
-  // ==========================
-  if (err.response?.status === 400 || errMsg.includes('400')) {
-    keyState[keyIdx].cooldownUntil = Infinity;
-    console.log(
-      `[${new Date().toISOString()}] ⛔ کلید ${keyIdx} برای همیشه غیر فعال شد (400)`
-    );
 
-    requestQueue.push({ req, res, next });
-    processQueue();
-    return;
-  }
 
   // ==========================
   // 403 → غیرفعال دائمی
