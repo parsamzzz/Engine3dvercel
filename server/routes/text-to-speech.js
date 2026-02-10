@@ -23,11 +23,9 @@ if (!PRIVATE_KEY) {
   console.error("❌ PRIVATE_KEY در .env یافت نشد.");
 }
 
-
 // =====================
-// ⬇ ادامهٔ کد شما بدون حذف هیچ چیز
+// وضعیت کلیدها و صف
 // =====================
-
 const keyState = API_KEYS.map(() => ({
   inUse: false,
   cooldownUntil: 0,
@@ -45,6 +43,14 @@ setInterval(() => {
   console.log('🔄 شمارش موفقیت‌ها ریست شد.');
 }, 24 * 60 * 60 * 1000);
 
+// =====================
+// تابع sanitize برای جلوگیری از ByteString Error
+// =====================
+function sanitizeText(text) {
+  if (!text) return '';
+  // حذف کاراکترهای نامرئی و کنترل
+  return text.replace(/[\u0000-\u001F\u007F\u2028\u2029\u200B-\u200D\uFEFF]/g, '');
+}
 
 // =====================
 // انتخاب کلید آزاد و سالم
@@ -76,7 +82,6 @@ function getNextAvailableKey() {
   return null;
 }
 
-
 // =====================
 // پردازش صف
 // =====================
@@ -99,29 +104,28 @@ async function processQueue() {
   }
 }
 
-
 // =====================
-// تابع اصلی درخواست
+// پایان روز Pacific Time
 // =====================
-// تابع کمکی برای پایان روز در Pacific Time
 function getEndOfDayPacificTimestamp() {
   const now = new Date();
-
-  // گرفتن تاریخ به Pacific Time
   const options = { timeZone: 'America/Los_Angeles', hour12: false };
   const pacificYear = now.toLocaleString('en-US', { ...options, year: 'numeric' });
   const pacificMonth = now.toLocaleString('en-US', { ...options, month: '2-digit' });
   const pacificDate = now.toLocaleString('en-US', { ...options, day: '2-digit' });
 
-  // 12 شب PT فردا
   const pacificEnd = new Date(`${pacificYear}-${pacificMonth}-${pacificDate}T00:00:00-07:00`);
   pacificEnd.setDate(pacificEnd.getDate() + 1);
 
   return pacificEnd.getTime();
 }
 
+// =====================
+// تابع اصلی درخواست
+// =====================
 async function handleRequest(req, res, next, keyIdx) {
-  const { text, multiSpeaker, voiceName } = req.body;
+  let { text, multiSpeaker, voiceName } = req.body;
+  text = sanitizeText(text); // ← متن امن
   const key = API_KEYS[keyIdx];
 
   console.log(`[${new Date().toISOString()}] 🔹 دریافت درخواست TTS: "${text}" | کلید انتخاب شده: ${keyIdx}`);
@@ -165,64 +169,54 @@ async function handleRequest(req, res, next, keyIdx) {
       return res.status(200).json({ message: 'صوتی تولید نشد.', parts });
     }
 
-} catch (err) {
+  } catch (err) {
+    const errMsg = err.message || '';
 
-  const errMsg = err.message || '';
+    // ==========================
+    // ByteString Error → فقط لاگ، کلید غیر فعال نمی‌شود
+    // ==========================
+    if (errMsg.includes('ByteString') || errMsg.includes('8207')) {
+      console.log(`[${new Date().toISOString()}] ⚠️ خطای ByteString 8207 | درخواست دوباره به صف اضافه شد`);
+      requestQueue.push({ req, res, next });
+      processQueue();
+      return;
+    }
 
-  // ==========================
-  // 🆕 خطای ByteString (ارزش 8207)
-  // ==========================
-  if (errMsg.includes('ByteString') || errMsg.includes('8207')) {
-    keyState[keyIdx].cooldownUntil = Infinity; // غیر فعال دائمی
-    console.log(
-      `[${new Date().toISOString()}] ⛔ کلید ${keyIdx} غیرفعال شد (ByteString Error 8207)`
-    );
+    // ==========================
+    // 429 → تا پایان روز PT غیرفعال
+    // ==========================
+    if (err.response?.status === 429 || errMsg.includes('429')) {
+      keyState[keyIdx].cooldownUntil = getEndOfDayPacificTimestamp();
+      console.log(`[${new Date().toISOString()}] ⛔ کلید ${keyIdx} تا پایان روز PT غیرفعال شد (429)`);
 
-    // درخواست را به صف برگردانیم
-    requestQueue.push({ req, res, next });
-    processQueue();
-    return;
+      requestQueue.push({ req, res, next });
+      processQueue();
+      return;
+    }
+
+    // ==========================
+    // 403 → غیرفعال دائمی
+    // ==========================
+    if (err.response?.status === 403 || errMsg.includes('403')) {
+      keyState[keyIdx].cooldownUntil = Infinity;
+      console.log(`[${new Date().toISOString()}] ⛔ کلید ${keyIdx} برای همیشه غیر فعال شد (403)`);
+
+      requestQueue.push({ req, res, next });
+      processQueue();
+      return;
+    }
+
+    // ==========================
+    // خطای عمومی
+    // ==========================
+    console.error(`[TTS Error key ${keyIdx}]:`, errMsg);
+    return res.status(500).json({ error: 'خطای سرویس TTS.' });
   }
-
-  // ==========================
-  // 429 → تا پایان روز PT غیرفعال
-  // ==========================
-  if (err.response?.status === 429 || errMsg.includes('429')) {
-    keyState[keyIdx].cooldownUntil = getEndOfDayPacificTimestamp();
-    console.log(`[${new Date().toISOString()}] ⛔ کلید ${keyIdx} تا پایان روز PT غیرفعال شد (429)`);
-
-    requestQueue.push({ req, res, next });
-    processQueue();
-    return;
-  }
-
-
-
-  // ==========================
-  // 403 → غیرفعال دائمی
-  // ==========================
-  if (err.response?.status === 403 || errMsg.includes('403')) {
-    keyState[keyIdx].cooldownUntil = Infinity;
-    console.log(`[${new Date().toISOString()}] ⛔ کلید ${keyIdx} برای همیشه غیر فعال شد (403)`);
-
-    requestQueue.push({ req, res, next });
-    processQueue();
-    return;
-  }
-
-  // ==========================
-  // خطای عمومی
-  // ==========================
-  console.error(`[TTS Error key ${keyIdx}]:`, errMsg);
-  return res.status(500).json({ error: 'خطای سرویس TTS.' });
 }
 
-
-}
-
-
-
+// =====================
 // مسیر POST
+// =====================
 router.post('/', (req, res, next) => {
   const clientKey = req.headers['x-api-key'];
   if (!clientKey || clientKey !== PRIVATE_KEY) {
