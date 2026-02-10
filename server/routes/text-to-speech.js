@@ -1,5 +1,5 @@
 import express from 'express';
-import { GoogleGenAI, Modality } from '@google/genai';
+import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -7,21 +7,13 @@ dotenv.config();
 const router = express.Router();
 
 // =====================
-// 🔑 لود کردن کلیدها از env
+// 🔑 لود کردن کلیدها
 // =====================
-const API_KEYS = process.env.TTS_KEYS
-  ? process.env.TTS_KEYS.split(',').map(k => k.trim())
-  : [];
-
+const API_KEYS = process.env.TTS_KEYS?.split(',').map(k => k.trim()) || [];
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
-if (API_KEYS.length === 0) {
-  console.error("❌ هیچ کلیدی در TTS_KEYS پیدا نشد. لطفاً .env را چک کنید.");
-}
-
-if (!PRIVATE_KEY) {
-  console.error("❌ PRIVATE_KEY در .env یافت نشد.");
-}
+if (!API_KEYS.length) console.error("❌ هیچ کلیدی در TTS_KEYS پیدا نشد.");
+if (!PRIVATE_KEY) console.error("❌ PRIVATE_KEY در .env یافت نشد.");
 
 // =====================
 // وضعیت کلیدها و صف
@@ -35,7 +27,6 @@ const keyState = API_KEYS.map(() => ({
 
 let roundRobinIndex = 0;
 const requestQueue = [];
-
 let successTimes = [];
 
 setInterval(() => {
@@ -44,23 +35,20 @@ setInterval(() => {
 }, 24 * 60 * 60 * 1000);
 
 // =====================
-// تابع sanitize برای جلوگیری از ByteString Error
+// sanitize برای حذف کاراکترهای نامرئی
 // =====================
 function sanitizeText(text) {
   if (!text) return '';
-  // حذف کاراکترهای نامرئی و کنترل
   return text.replace(/[\u0000-\u001F\u007F\u2028\u2029\u200B-\u200D\uFEFF]/g, '');
 }
 
 // =====================
-// انتخاب کلید آزاد و سالم
+// گرفتن کلید آزاد
 // =====================
 function getNextAvailableKey() {
   const now = Date.now();
-  const totalKeys = API_KEYS.length;
-
-  for (let i = 0; i < totalKeys; i++) {
-    const idx = (roundRobinIndex + i) % totalKeys;
+  for (let i = 0; i < API_KEYS.length; i++) {
+    const idx = (roundRobinIndex + i) % API_KEYS.length;
     const state = keyState[idx];
 
     state.requestsInMinute = state.requestsInMinute.filter(t => now - t < 60 * 1000);
@@ -69,39 +57,15 @@ function getNextAvailableKey() {
     if (!state.inUse &&
         now > state.cooldownUntil &&
         state.requestsInMinute.length < 10 &&
-        state.requestsInDay.length < 100
-    ) {
+        state.requestsInDay.length < 100) {
       state.inUse = true;
       state.requestsInMinute.push(now);
       state.requestsInDay.push(now);
-
-      roundRobinIndex = (idx + 1) % totalKeys;
+      roundRobinIndex = (idx + 1) % API_KEYS.length;
       return idx;
     }
   }
   return null;
-}
-
-// =====================
-// پردازش صف
-// =====================
-async function processQueue() {
-  if (requestQueue.length === 0) return;
-
-  for (let i = 0; i < requestQueue.length; i++) {
-    const queueItem = requestQueue[i];
-    const keyIdx = getNextAvailableKey();
-    if (keyIdx === null) continue;
-
-    requestQueue.splice(i, 1);
-    i--;
-
-    handleRequest(queueItem.req, queueItem.res, queueItem.next, keyIdx)
-      .finally(() => {
-        keyState[keyIdx].inUse = false;
-        processQueue();
-      });
-  }
 }
 
 // =====================
@@ -121,18 +85,41 @@ function getEndOfDayPacificTimestamp() {
 }
 
 // =====================
-// تابع اصلی درخواست
+// پردازش صف
+// =====================
+async function processQueue() {
+  if (!requestQueue.length) return;
+
+  for (let i = 0; i < requestQueue.length; i++) {
+    const { req, res, next } = requestQueue[i];
+    const keyIdx = getNextAvailableKey();
+    if (keyIdx === null) continue;
+
+    requestQueue.splice(i, 1);
+    i--;
+
+    handleRequest(req, res, next, keyIdx)
+      .finally(() => {
+        keyState[keyIdx].inUse = false;
+        processQueue();
+      });
+  }
+}
+
+// =====================
+// handleRequest اصلی
 // =====================
 async function handleRequest(req, res, next, keyIdx) {
   let { text, multiSpeaker, voiceName } = req.body;
-  text = sanitizeText(text); // ← متن امن
+  text = sanitizeText(text);
   const key = API_KEYS[keyIdx];
 
-  console.log(`[${new Date().toISOString()}] 🔹 دریافت درخواست TTS: "${text}" | کلید انتخاب شده: ${keyIdx}`);
+  console.log(`[${new Date().toISOString()}] 🔹 دریافت درخواست TTS | کلید ${keyIdx}`);
 
   try {
-    let speechConfig = {};
-    if (multiSpeaker && Array.isArray(multiSpeaker) && multiSpeaker.length > 0) {
+    // آماده‌سازی speechConfig
+    let speechConfig;
+    if (multiSpeaker?.length) {
       speechConfig = {
         multiSpeakerVoiceConfig: {
           speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
@@ -145,70 +132,72 @@ async function handleRequest(req, res, next, keyIdx) {
       speechConfig = { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' } } };
     }
 
-    const ai = new GoogleGenAI({ apiKey: key });
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-preview-tts',
-      contents: [{ parts: [{ text }] }],
-      config: { responseModalities: [Modality.AUDIO], speechConfig }
-    });
+    // درخواست HTTP مستقیم
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key
+        },
+        body: JSON.stringify({
+          model: 'gemini-2.5-flash-preview-tts',
+          contents: [{ parts: [{ text }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig
+          }
+        })
+      }
+    );
 
-    const parts = response.candidates?.[0]?.content?.parts || [];
-    const audioPart = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
+    const data = await response.json();
 
-    if (audioPart?.inlineData?.data) {
-      successTimes.push(Date.now());
-      const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-      successTimes = successTimes.filter(t => t > cutoff);
-      const successNumber = successTimes.length;
-
-      console.log(`[${new Date().toISOString()}] ✅ صوت تولید شد | کلید: ${keyIdx} | موفقیت‌های 24 ساعته: ${successNumber}`);
-
-      return res.json({ base64: audioPart.inlineData.data, mimeType: audioPart.inlineData.mimeType, successNumber });
-    } else {
-      console.log(`[${new Date().toISOString()}] ⚠️ صوت تولید نشد | کلید: ${keyIdx} | parts موجود: ${parts.length}`);
-      return res.status(200).json({ message: 'صوتی تولید نشد.', parts });
+    if (!data.candidates?.[0]?.content?.parts?.length) {
+      return res.status(500).json({ error: 'صوت تولید نشد', data });
     }
+
+    const parts = data.candidates[0].content.parts;
+    const audioPart = parts.find(p => p.inlineData?.mimeType?.startsWith('audio/'));
+
+    if (!audioPart?.inlineData?.data) {
+      return res.status(500).json({ error: 'صوت تولید نشد', parts });
+    }
+
+    successTimes.push(Date.now());
+    successTimes = successTimes.filter(t => t > Date.now() - 24 * 60 * 60 * 1000);
+
+    return res.json({
+      base64: audioPart.inlineData.data,
+      mimeType: audioPart.inlineData.mimeType,
+      successNumber: successTimes.length
+    });
 
   } catch (err) {
     const errMsg = err.message || '';
 
-    // ==========================
-    // ByteString Error → فقط لاگ، کلید غیر فعال نمی‌شود
-    // ==========================
     if (errMsg.includes('ByteString') || errMsg.includes('8207')) {
-      console.log(`[${new Date().toISOString()}] ⚠️ خطای ByteString 8207 | درخواست دوباره به صف اضافه شد`);
+      console.log('⚠️ ByteString Error → دوباره به صف اضافه شد');
       requestQueue.push({ req, res, next });
       processQueue();
       return;
     }
 
-    // ==========================
-    // 429 → تا پایان روز PT غیرفعال
-    // ==========================
-    if (err.response?.status === 429 || errMsg.includes('429')) {
+    if (err.status === 429 || errMsg.includes('429')) {
       keyState[keyIdx].cooldownUntil = getEndOfDayPacificTimestamp();
-      console.log(`[${new Date().toISOString()}] ⛔ کلید ${keyIdx} تا پایان روز PT غیرفعال شد (429)`);
-
       requestQueue.push({ req, res, next });
       processQueue();
       return;
     }
 
-    // ==========================
-    // 403 → غیرفعال دائمی
-    // ==========================
-    if (err.response?.status === 403 || errMsg.includes('403')) {
+    if (err.status === 403 || errMsg.includes('403')) {
       keyState[keyIdx].cooldownUntil = Infinity;
-      console.log(`[${new Date().toISOString()}] ⛔ کلید ${keyIdx} برای همیشه غیر فعال شد (403)`);
-
       requestQueue.push({ req, res, next });
       processQueue();
       return;
     }
 
-    // ==========================
-    // خطای عمومی
-    // ==========================
     console.error(`[TTS Error key ${keyIdx}]:`, errMsg);
     return res.status(500).json({ error: 'خطای سرویس TTS.' });
   }
@@ -232,6 +221,9 @@ router.post('/', (req, res, next) => {
   processQueue();
 });
 
+// =====================
+// error handler
+// =====================
 router.use((err, req, res, next) => {
   console.error('💥 Unhandled error:', err);
   res.status(500).json({ error: 'خطای سرور.' });
