@@ -3,92 +3,114 @@
 import express from "express";
 import multer from "multer";
 import axios from "axios";
-import FormData from "form-data";
 import { Readable } from "stream";
 
-const router = express.Router(); // ✅ به جای app
+const router = express.Router();
 
-// Multer memory storage → ذخیره در RAM
-const storage = multer.memoryStorage();
-
+// ================================
+// ⚙️ Multer Config (RAM Storage)
+// ================================
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
+
   limits: {
-    fileSize: 1024 * 1024 * 1024 * 5 // حداکثر 5GB (در صورت نیاز تغییر بده)
+    fileSize: 1024 * 1024 * 1024 * 5 // 5GB
   }
 });
 
+
 // ================================
-// 📌 Endpoint پراکسی آپلود
+// 📌 Proxy Upload Endpoint
 // ================================
 router.post("/", upload.single("file"), async (req, res) => {
   try {
-    // بررسی فایل
+
+    // ================================
+    // Validation
+    // ================================
     if (!req.file) {
       console.error("[VIDEO-PROXY] No file uploaded");
+
       return res.status(400).json({
         success: false,
         message: "No file uploaded"
       });
     }
 
-    // بررسی signedUrl
     const { signedUrl } = req.body;
 
     if (!signedUrl) {
       console.error("[VIDEO-PROXY] Signed URL missing");
+
       return res.status(400).json({
         success: false,
-        message: "Signed URL missing"
+        message: "Signed URL is required"
       });
     }
 
-    console.log("=================================");
-    console.log("[VIDEO-PROXY] File:", req.file.originalname);
-    console.log("[VIDEO-PROXY] Size:", req.file.size);
-    console.log("[VIDEO-PROXY] Type:", req.file.mimetype);
-    console.log("[VIDEO-PROXY] URL:", signedUrl);
-    console.log("=================================");
 
-    // ساخت FormData
-    const form = new FormData();
+    // ================================
+    // Logs
+    // ================================
+    console.log("========== VIDEO PROXY ==========");
+    console.log("File:", req.file.originalname);
+    console.log("Size:", req.file.size);
+    console.log("Type:", req.file.mimetype);
+    console.log("SignedUrl:", signedUrl);
+    console.log("================================");
 
-    const stream = Readable.from(req.file.buffer);
 
-    form.append("file", stream, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype,
-      knownLength: req.file.size
-    });
+    // ================================
+    // Buffer → Stream
+    // ================================
+    const videoStream = Readable.from(req.file.buffer);
 
-    // ارسال به Luma
-    const response = await axios.post(signedUrl, form, {
-      headers: {
-        ...form.getHeaders()
-      },
-      maxBodyLength: Infinity,
-      maxContentLength: Infinity,
-      timeout: 1000 * 60 * 30 // 30 دقیقه برای فایل سنگین
-    });
 
-    console.log("[VIDEO-PROXY] Upload Success");
+    // ================================
+    // Upload To Luma (PUT + Stream)
+    // ================================
+    const response = await axios.put(
+      signedUrl,
+      videoStream,
+      {
+        headers: {
+          "Content-Type": req.file.mimetype,
+          "Content-Length": req.file.size
+        },
 
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+
+        timeout: 1000 * 60 * 30 // 30 min
+      }
+    );
+
+
+    console.log("[VIDEO-PROXY] Upload Success:", response.status);
+
+
+    // ================================
+    // Response
+    // ================================
     return res.status(200).json({
       success: true,
-      message: "Video uploaded successfully",
-      data: response.data || null
+      message: "Uploaded to Luma successfully",
+      status: response.status
     });
 
-  } catch (error) {
+  }
+  catch (error) {
 
     console.error("[VIDEO-PROXY] Upload Failed");
 
     if (error.response) {
       console.error("Status:", error.response.status);
       console.error("Data:", error.response.data);
-    } else {
+    }
+    else {
       console.error("Error:", error.message);
     }
+
 
     return res.status(500).json({
       success: false,
@@ -100,6 +122,6 @@ router.post("/", upload.single("file"), async (req, res) => {
 
 
 // ================================
-// ✅ Export Router
+// Export Router
 // ================================
 export default router;
