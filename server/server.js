@@ -13,7 +13,7 @@ import speechToTextRouter from './routes/speech-to-text.js';
 import musicRouter from './routes/music.js';
 import soundRouter from './routes/sound.js';
 import voiceRoutes from './routes/voice.js';
-import videoproxyRoutes from './routes/videoproxy.js';
+import videoproxyRoute from './routes/videoproxy.js';
 
 // import nanobananaRoute from './routes/nanobanana.js';
 // import imageDescriptionToVideoProxy from './routes/image-description-to-video-proxy.js';
@@ -61,7 +61,7 @@ app.use('/api/voice', voiceRoutes);
 // app.use('/api/image-description-to-video', imageDescriptionToVideoProxy);
 // app.use('/api/image-to-video', imageToVideoProxy);
 app.use('/api/nanobanana2', nanobanana2Route);
-app.use('/api/videoproxy', videoproxyRoutes);
+app.use('/api/videoproxy', videoproxyRoute);
 
 
 
