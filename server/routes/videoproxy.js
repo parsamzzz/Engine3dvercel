@@ -4,108 +4,74 @@ import express from "express";
 import multer from "multer";
 import axios from "axios";
 import FormData from "form-data";
-import fs from "fs";
-import path from "path";
+import { Readable } from "stream";
 
-const router = express.Router();
+const router = express.Router(); // ✅ به جای app
 
-// ================================
-// 📁 Temp Upload Folder
-// ================================
-const UPLOAD_DIR = "uploads";
+// Multer memory storage → ذخیره در RAM
+const storage = multer.memoryStorage();
 
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR);
-}
-
-// ================================
-// 📌 Multer → Disk Storage (نه RAM ❌)
-// ================================
 const upload = multer({
-  dest: UPLOAD_DIR,
+  storage,
   limits: {
-    fileSize: 1024 * 1024 * 1024 * 5 // 5GB
+    fileSize: 1024 * 1024 * 1024 * 5 // حداکثر 5GB (در صورت نیاز تغییر بده)
   }
 });
 
 // ================================
-// 🚀 Video Upload Proxy
+// 📌 Endpoint پراکسی آپلود
 // ================================
 router.post("/", upload.single("file"), async (req, res) => {
-
-  const tempFilePath = req.file?.path;
-
   try {
-
-    // ================================
-    // Validation
-    // ================================
+    // بررسی فایل
     if (!req.file) {
       console.error("[VIDEO-PROXY] No file uploaded");
-
       return res.status(400).json({
         success: false,
         message: "No file uploaded"
       });
     }
 
+    // بررسی signedUrl
     const { signedUrl } = req.body;
 
     if (!signedUrl) {
       console.error("[VIDEO-PROXY] Signed URL missing");
-
       return res.status(400).json({
         success: false,
         message: "Signed URL missing"
       });
     }
 
-    // ================================
-    // Logs
-    // ================================
     console.log("=================================");
-    console.log("[VIDEO-PROXY]");
-    console.log("File:", req.file.originalname);
-    console.log("Size:", req.file.size);
-    console.log("Temp:", tempFilePath);
-    console.log("Type:", req.file.mimetype);
-    console.log("URL:", signedUrl);
+    console.log("[VIDEO-PROXY] File:", req.file.originalname);
+    console.log("[VIDEO-PROXY] Size:", req.file.size);
+    console.log("[VIDEO-PROXY] Type:", req.file.mimetype);
+    console.log("[VIDEO-PROXY] URL:", signedUrl);
     console.log("=================================");
 
-    // ================================
-    // Stream from Disk
-    // ================================
-    const fileStream = fs.createReadStream(tempFilePath);
-
+    // ساخت FormData
     const form = new FormData();
 
-    form.append("file", fileStream, {
+    const stream = Readable.from(req.file.buffer);
+
+    form.append("file", stream, {
       filename: req.file.originalname,
       contentType: req.file.mimetype,
       knownLength: req.file.size
     });
 
-    // ================================
-    // Send to Luma
-    // ================================
+    // ارسال به Luma
     const response = await axios.post(signedUrl, form, {
       headers: {
-        ...form.getHeaders(),
-        "Content-Length": form.getLengthSync()
+        ...form.getHeaders()
       },
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
-      timeout: 1000 * 60 * 60 // 1 ساعت
+      timeout: 1000 * 60 * 30 // 30 دقیقه برای فایل سنگین
     });
 
     console.log("[VIDEO-PROXY] Upload Success");
-
-    // ================================
-    // Delete temp file
-    // ================================
-    fs.unlink(tempFilePath, err => {
-      if (err) console.error("Temp delete error:", err);
-    });
 
     return res.status(200).json({
       success: true,
@@ -122,13 +88,6 @@ router.post("/", upload.single("file"), async (req, res) => {
       console.error("Data:", error.response.data);
     } else {
       console.error("Error:", error.message);
-    }
-
-    // ================================
-    // Cleanup on Error
-    // ================================
-    if (tempFilePath) {
-      fs.unlink(tempFilePath, () => {});
     }
 
     return res.status(500).json({
