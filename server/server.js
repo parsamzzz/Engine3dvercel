@@ -1,19 +1,19 @@
-import express from 'express';
-import path from 'path';
-import dotenv from 'dotenv';
-import cors from 'cors';
-import { fileURLToPath } from 'url';
-import axios from 'axios';
+import express from "express";
+import path from "path";
+import dotenv from "dotenv";
+import cors from "cors";
+import { fileURLToPath } from "url";
+import axios from "axios";
 
-import geminiImageRoute from './routes/gemini.js';
-import textToImageRouter from './routes/text-to-image.js';
-import textToSpeechRoute from './routes/text-to-speech.js';
-import gemini2Router from './routes/gemini2.js';
-import speechToTextRouter from './routes/speech-to-text.js';
-import musicRouter from './routes/music.js';
-import soundRouter from './routes/sound.js';
-import voiceRoutes from './routes/voice.js';
-import videoproxyRoute from './routes/videoproxy.js';
+import geminiImageRoute from "./routes/gemini.js";
+import textToImageRouter from "./routes/text-to-image.js";
+import textToSpeechRoute from "./routes/text-to-speech.js";
+import gemini2Router from "./routes/gemini2.js";
+import speechToTextRouter from "./routes/speech-to-text.js";
+import musicRouter from "./routes/music.js";
+import soundRouter from "./routes/sound.js";
+import voiceRoutes from "./routes/voice.js";
+import videoproxyRoute from "./routes/videoproxy.js";
 
 // import nanobananaRoute from './routes/nanobanana.js';
 // import imageDescriptionToVideoProxy from './routes/image-description-to-video-proxy.js';
@@ -27,43 +27,41 @@ import videoproxyRoute from './routes/videoproxy.js';
 // import klingRoute from './routes/kling.js';
 // import seedanceRoute from './routes/seedance.js';
 // import soraRoute from './routes/sora.js';
-import veoRoute from './routes/veo.js';
+import veoRoute from "./routes/veo.js";
 // import hailuoRoute from './routes/hailuo.js';
-import nanobanana2Route from './routes/nanobanana2.js';
+import nanobanana2Route from "./routes/nanobanana2.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT;
 if (!PORT) {
-  console.error('ERROR: PORT environment variable is not defined.');
+  console.error("ERROR: PORT environment variable is not defined.");
   process.exit(1);
 }
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const clientPath = path.join(__dirname, 'client');
+const clientPath = path.join(__dirname, "client");
 
 app.use(cors());
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/api/gemini-image', geminiImageRoute);
-app.use('/api/text-to-image', textToImageRouter);
-app.use('/api/text-to-speech', textToSpeechRoute);
-app.use('/api/gemini2', gemini2Router);
-app.use('/api/speech-to-text', speechToTextRouter);
-app.use('/api/music', musicRouter);
-app.use('/api/sound', soundRouter);
-app.use('/api/voice', voiceRoutes);
+app.use("/api/gemini-image", geminiImageRoute);
+app.use("/api/text-to-image", textToImageRouter);
+app.use("/api/text-to-speech", textToSpeechRoute);
+app.use("/api/gemini2", gemini2Router);
+app.use("/api/speech-to-text", speechToTextRouter);
+app.use("/api/music", musicRouter);
+app.use("/api/sound", soundRouter);
+app.use("/api/voice", voiceRoutes);
 // app.use('/api/nanobanana', nanobananaRoute);
 // app.use('/api/text-to-video', textToVideoProxy);
 // app.use('/api/image-description-to-video', imageDescriptionToVideoProxy);
 // app.use('/api/image-to-video', imageToVideoProxy);
-app.use('/api/nanobanana2', nanobanana2Route);
-app.use('/api/videoproxy', videoproxyRoute);
-
-
+app.use("/api/nanobanana2", nanobanana2Route);
+app.use("/api/videoproxy", videoproxyRoute);
 
 // app.use('/api/sora2', sora2Route);
 // app.use('/api/universal', universalRoute);
@@ -73,11 +71,8 @@ app.use('/api/videoproxy', videoproxyRoute);
 // app.use('/api/kling', klingRoute);
 // app.use('/api/seedance', seedanceRoute);
 // app.use('/api/sora', soraRoute);
-app.use('/api/veo', veoRoute);
+app.use("/api/veo", veoRoute);
 // app.use('/api/hailuo', hailuoRoute);
-
-
-
 
 const BASE_PROMPT = `تو دستیار هوشمند تریدیفای هستی و کاربر وارد داشبورد شده است.  
 تو کارشناس هوش مصنوعی و پرامپت‌نویسی هستی و هدف تو راهنمایی کاربران برای انتخاب سرویس AI مناسب، کمک به نوشتن پرامپت حرفه‌ای و ترغیب به افزایش اعتبار یا خرید اشتراک است.  
@@ -118,24 +113,21 @@ const BASE_PROMPT = `تو دستیار هوشمند تریدیفای هستی و
 
 تماس: info@threedify.org | +1(437)326-2654 | ایران: ۰۹۰۵۵۰۱۶۰۰۸`;
 
-
-const API_KEYS = [
- "AIzaSyCTruTqaNJl-H20yXv9PYaxua-K5KmcfKM"
-];
+const API_KEYS = ["AIzaSyCTruTqaNJl-H20yXv9PYaxua-K5KmcfKM"];
 
 let currentKeyIndex = 0;
 
 // 🧠 لود بالانسینگ واقعی بین کلیدها
-app.post('/api/chat', async (req, res) => {
+app.post("/api/chat", async (req, res) => {
   try {
     const { history } = req.body;
     if (!Array.isArray(history)) {
-      return res.status(400).json({ error: 'فرمت history نامعتبر است.' });
+      return res.status(400).json({ error: "فرمت history نامعتبر است." });
     }
 
     const userConversation = history
-      .map(h => (h.role === 'user' ? 'کاربر' : 'دستیار') + ': ' + h.text)
-      .join('\n');
+      .map((h) => (h.role === "user" ? "کاربر" : "دستیار") + ": " + h.text)
+      .join("\n");
 
     const fullPrompt = `${BASE_PROMPT}\n\n🧠 مکالمه تا این لحظه:\n${userConversation}\n\n🎯 فقط به آخرین سؤال کاربر پاسخ بده — دقیق، مختصر و متناسب با زبان کاربر.`;
 
@@ -145,12 +137,19 @@ app.post('/api/chat', async (req, res) => {
     const MAX_FAILS = 2;
 
     if (!global.keyHealth) {
-      global.keyHealth = Object.fromEntries(API_KEYS.map(k => [k, { fails: 0, healthy: true }]));
+      global.keyHealth = Object.fromEntries(
+        API_KEYS.map((k) => [k, { fails: 0, healthy: true }]),
+      );
     }
 
-    const healthyKeys = API_KEYS.filter(k => global.keyHealth[k].healthy);
+    const healthyKeys = API_KEYS.filter((k) => global.keyHealth[k].healthy);
     if (healthyKeys.length === 0) {
-      API_KEYS.forEach(k => (global.keyHealth[k].healthy = true, global.keyHealth[k].fails = 0));
+      API_KEYS.forEach(
+        (k) => (
+          (global.keyHealth[k].healthy = true),
+          (global.keyHealth[k].fails = 0)
+        ),
+      );
     }
 
     // تقسیم به گروه‌ها
@@ -161,30 +160,37 @@ app.post('/api/chat', async (req, res) => {
 
     for (const batch of batches) {
       const results = await Promise.allSettled(
-        batch.map(async key => {
+        batch.map(async (key) => {
           try {
             const aiRes = await axios.post(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
               { contents: [{ parts: [{ text: fullPrompt }] }] },
-              { headers: { 'Content-Type': 'application/json' }, timeout: TIMEOUT }
+              {
+                headers: { "Content-Type": "application/json" },
+                timeout: TIMEOUT,
+              },
             );
 
-            const reply = aiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            const reply =
+              aiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (reply) {
               global.keyHealth[key].fails = 0;
               return { key, reply };
             } else {
-              throw new Error('پاسخ خالی');
+              throw new Error("پاسخ خالی");
             }
           } catch (err) {
             global.keyHealth[key].fails++;
-            if (global.keyHealth[key].fails >= MAX_FAILS) global.keyHealth[key].healthy = false;
+            if (global.keyHealth[key].fails >= MAX_FAILS)
+              global.keyHealth[key].healthy = false;
             return null;
           }
-        })
+        }),
       );
 
-      const success = results.find(r => r.status === 'fulfilled' && r.value && r.value.reply);
+      const success = results.find(
+        (r) => r.status === "fulfilled" && r.value && r.value.reply,
+      );
       if (success) {
         const { key, reply } = success.value;
         currentKeyIndex = (API_KEYS.indexOf(key) + 1) % API_KEYS.length;
@@ -192,30 +198,41 @@ app.post('/api/chat', async (req, res) => {
         return res.json({ reply });
       }
 
-      console.warn('⚠️ ');
+      console.warn("⚠️ ");
     }
 
-    return res.status(503).json({ error: 'بعداً تلاش کنید.' });
+    return res.status(503).json({ error: "بعداً تلاش کنید." });
   } catch (err) {
-    console.error('AI API error:', err.message);
-    return res.status(500).json({ error: 'خطا در ارتباط با سرویس هوش مصنوعی.' });
+    console.error("AI API error:", err.message);
+    return res
+      .status(500)
+      .json({ error: "خطا در ارتباط با سرویس هوش مصنوعی." });
   }
 });
 
 // 🌐 استاتیک‌ها
-app.use(express.static(clientPath, { extensions: ['html', 'css', 'js'], index: false }));
-app.get('/', (req, res) => res.sendFile(path.join(clientPath, 'index.html')));
+app.use(
+  express.static(clientPath, {
+    extensions: ["html", "css", "js"],
+    index: false,
+  }),
+);
+app.get("/", (req, res) => res.sendFile(path.join(clientPath, "index.html")));
 
 // 404 و error handler
-app.use((req, res) => res.status(404).send('404 - مسیر مورد نظر وجود ندارد.'));
+app.use((req, res) => res.status(404).send("404 - مسیر مورد نظر وجود ندارد."));
 app.use((err, req, res, next) => {
-  console.error('Unhandled route error:', err);
-  res.status(500).json({ error: 'خطای سرور رخ داده است.' });
+  console.error("Unhandled route error:", err);
+  res.status(500).json({ error: "خطای سرور رخ داده است." });
 });
 
 // 🔐 خطاهای سیستم
-process.on('uncaughtException', err => console.error('Unhandled Exception:', err));
-process.on('unhandledRejection', reason => console.error('Unhandled Rejection:', reason));
+process.on("uncaughtException", (err) =>
+  console.error("Unhandled Exception:", err),
+);
+process.on("unhandledRejection", (reason) =>
+  console.error("Unhandled Rejection:", reason),
+);
 
 // 🚀 استارت سرور
 app.listen(PORT);
@@ -223,18 +240,27 @@ app.listen(PORT);
 // 🕒 پینگ نگه‌دارنده
 (async function startPing() {
   try {
-    const res = await axios.get('https://api.restful-api.dev/objects/1');
-    console.log(`[Ping] Initial status: ${res.status} - ${new Date().toISOString()}`);
+    const res = await axios.get("https://api.restful-api.dev/objects/1");
+    console.log(
+      `[Ping] Initial status: ${res.status} - ${new Date().toISOString()}`,
+    );
   } catch (e) {
-    console.error('[Ping] Initial error:', e.message);
+    console.error("[Ping] Initial error:", e.message);
   }
 
-  setInterval(async () => {
-    try {
-      const response = await axios.get('https://api.restful-api.dev/objects/1');
-      console.log(`[Ping] Status: ${response.status} - ${new Date().toISOString()}`);
-    } catch (error) {
-      console.error(`[Ping] Error:`, error.message);
-    }
-  }, 10 * 60 * 1000);
+  setInterval(
+    async () => {
+      try {
+        const response = await axios.get(
+          "https://api.restful-api.dev/objects/1",
+        );
+        console.log(
+          `[Ping] Status: ${response.status} - ${new Date().toISOString()}`,
+        );
+      } catch (error) {
+        console.error(`[Ping] Error:`, error.message);
+      }
+    },
+    10 * 60 * 1000,
+  );
 })();

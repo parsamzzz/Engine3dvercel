@@ -1,68 +1,105 @@
-// VIDEO-PROXY.JS
+// routes/videoproxy.js
+
 import express from "express";
 import multer from "multer";
 import axios from "axios";
 import FormData from "form-data";
 import { Readable } from "stream";
 
-const app = express();
-const PORT = 3000;
+const router = express.Router(); // ✅ به جای app
 
-// Multer memory storage → فایل در RAM ذخیره می‌شود
+// Multer memory storage → ذخیره در RAM
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
 
-// Endpoint پراکسی
-app.post("/", upload.single("file"), async (req, res) => {
-  try {
-    // بررسی وجود فایل
-    if (!req.file) {
-      console.log("[ERROR] No file uploaded.");
-      return res.status(400).json({ success: false, message: "No file uploaded." });
-    }
-
-    // دریافت signed URL از فرم داده
-    const signedUrl = req.body.signedUrl;
-    if (!signedUrl) {
-      console.log("[ERROR] Signed URL missing.");
-      return res.status(400).json({ success: false, message: "Signed URL missing." });
-    }
-
-    console.log(`[INFO] Received file: ${req.file.originalname}, size: ${req.file.size} bytes`);
-    console.log(`[INFO] Signed URL: ${signedUrl}`);
-
-    // ایجاد FormData برای ارسال به Luma
-    const form = new FormData();
-    const stream = Readable.from(req.file.buffer);
-
-    // append فایل با همان اسم اصلی
-    form.append("file", stream, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype
-    });
-
-    // ارسال فایل به Luma
-    const lumaResponse = await axios.post(signedUrl, form, {
-      headers: {
-        ...form.getHeaders()
-      },
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity
-    });
-
-    console.log("[INFO] File proxied successfully.");
-    return res.status(200).json({
-      success: true,
-      message: "Video proxied to Luma successfully",
-      lumaResponse: lumaResponse.data
-    });
-  } catch (err) {
-    console.error("[ERROR] Proxy upload failed:", err.message);
-    return res.status(500).json({ success: false, message: err.message });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 1024 * 1024 * 1024 * 5 // حداکثر 5GB (در صورت نیاز تغییر بده)
   }
 });
 
-// شروع سرور
-app.listen(PORT, () => {
-  console.log(`[INFO] Proxy server running at http://localhost:${PORT}`);
+// ================================
+// 📌 Endpoint پراکسی آپلود
+// ================================
+router.post("/", upload.single("file"), async (req, res) => {
+  try {
+    // بررسی فایل
+    if (!req.file) {
+      console.error("[VIDEO-PROXY] No file uploaded");
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded"
+      });
+    }
+
+    // بررسی signedUrl
+    const { signedUrl } = req.body;
+
+    if (!signedUrl) {
+      console.error("[VIDEO-PROXY] Signed URL missing");
+      return res.status(400).json({
+        success: false,
+        message: "Signed URL missing"
+      });
+    }
+
+    console.log("=================================");
+    console.log("[VIDEO-PROXY] File:", req.file.originalname);
+    console.log("[VIDEO-PROXY] Size:", req.file.size);
+    console.log("[VIDEO-PROXY] Type:", req.file.mimetype);
+    console.log("[VIDEO-PROXY] URL:", signedUrl);
+    console.log("=================================");
+
+    // ساخت FormData
+    const form = new FormData();
+
+    const stream = Readable.from(req.file.buffer);
+
+    form.append("file", stream, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
+      knownLength: req.file.size
+    });
+
+    // ارسال به Luma
+    const response = await axios.post(signedUrl, form, {
+      headers: {
+        ...form.getHeaders()
+      },
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+      timeout: 1000 * 60 * 30 // 30 دقیقه برای فایل سنگین
+    });
+
+    console.log("[VIDEO-PROXY] Upload Success");
+
+    return res.status(200).json({
+      success: true,
+      message: "Video uploaded successfully",
+      data: response.data || null
+    });
+
+  } catch (error) {
+
+    console.error("[VIDEO-PROXY] Upload Failed");
+
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Data:", error.response.data);
+    } else {
+      console.error("Error:", error.message);
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Proxy upload failed",
+      error: error.message
+    });
+  }
 });
+
+
+// ================================
+// ✅ Export Router
+// ================================
+export default router;
