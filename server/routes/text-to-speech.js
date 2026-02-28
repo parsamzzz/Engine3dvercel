@@ -29,9 +29,7 @@ setInterval(() => {
 
 function sanitizeText(text) {
   if (!text) return '';
-
   const allowed = /[آ-ی۰-۹a-zA-Z\s.,:!?ءًٌٍَُِّْٰٔ]/;
-
   let result = '';
   let prevChar = '';
 
@@ -114,30 +112,9 @@ async function handleRequest(req, res, next, keyIdx) {
   text = sanitizeText(text);
   const key = API_KEYS[keyIdx];
 
-  console.log(`[${new Date().toISOString()}] 🔹 درخواست TTS | key ${keyIdx} | length: ${text.length}`);
+  console.log(`[${new Date().toISOString()}] 🔹 TTS | key ${keyIdx}`);
 
   try {
-    let speechConfig;
-
-    if (multiSpeaker?.length) {
-      speechConfig = {
-        multiSpeakerVoiceConfig: {
-          speakerVoiceConfigs: multiSpeaker.map(({ speaker, voiceName }) => ({
-            speaker,
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' }
-            }
-          }))
-        }
-      };
-    } else {
-      speechConfig = {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' }
-        }
-      };
-    }
-
     const response = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',
       {
@@ -151,13 +128,16 @@ async function handleRequest(req, res, next, keyIdx) {
           contents: [{ parts: [{ text }] }],
           generationConfig: {
             responseModalities: ["AUDIO"],
-            speechConfig
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' }
+              }
+            }
           }
         })
       }
     );
 
-    // ✅ مهم: بررسی status واقعی
     if (!response.ok) {
       const errorText = await response.text();
       const error = new Error(errorText);
@@ -167,64 +147,52 @@ async function handleRequest(req, res, next, keyIdx) {
 
     const data = await response.json();
 
-    if (!data.candidates?.[0]?.content?.parts?.length) {
-      throw new Error('NO_AUDIO_GENERATED');
-    }
-
-    const parts = data.candidates[0].content.parts;
-    const audioPart = parts.find(p => p.inlineData?.mimeType?.startsWith('audio/'));
+    const parts = data.candidates?.[0]?.content?.parts;
+    const audioPart = parts?.find(p => p.inlineData?.mimeType?.startsWith('audio/'));
 
     if (!audioPart?.inlineData?.data) {
-      throw new Error('EMPTY_AUDIO_DATA');
+      throw new Error('NO_AUDIO');
     }
 
     successTimes.push(Date.now());
-    successTimes = successTimes.filter(t => t > Date.now() - 24 * 60 * 60 * 1000);
-
-    console.log(`[TTS key ${keyIdx}] ✅ موفق | total: ${successTimes.length}`);
 
     if (!res.headersSent) {
       return res.json({
         base64: audioPart.inlineData.data,
-        mimeType: audioPart.inlineData.mimeType,
-        successNumber: successTimes.length
+        mimeType: audioPart.inlineData.mimeType
       });
     }
 
   } catch (err) {
-    const errMsg = err.message || '';
     const status = err.status || 0;
+    const errMsg = err.message || '';
 
-    console.error(`[TTS key ${keyIdx}] ⚠️ خطا:`, status, errMsg);
+    console.error(`❌ key ${keyIdx} failed | status: ${status}`);
 
-    // خطای متن
-    if (errMsg.includes('ByteString') || errMsg.includes('8207')) {
-      requestQueue.push({ req, res, next });
-      setTimeout(processQueue, 1000);
-      return;
-    }
-
-    // Rate limit
-    if (status === 429) {
-      keyState[keyIdx].cooldownUntil = getEndOfDayPacificTimestamp();
-      console.log(`⏳ key ${keyIdx} cooldown شد`);
-      requestQueue.push({ req, res, next });
-      setTimeout(processQueue, 1000);
-      return;
-    }
-
-    // Forbidden / invalid key
+    // ⛔ 403 → غیرفعال دائمی
     if (status === 403) {
       keyState[keyIdx].cooldownUntil = Infinity;
-      console.log(`🚫 key ${keyIdx} غیرفعال شد`);
-      requestQueue.push({ req, res, next });
-      setTimeout(processQueue, 1000);
-      return;
+      console.log(`🚫 key ${keyIdx} permanently disabled`);
     }
 
-    if (!res.headersSent) {
-      return res.status(500).json({ error: 'خطای سرویس TTS.' });
+    // ⏳ 429 → cooldown
+    else if (status === 429) {
+      keyState[keyIdx].cooldownUntil = getEndOfDayPacificTimestamp();
+      console.log(`⏳ key ${keyIdx} cooldown`);
     }
+
+    // 🔁 400 → برو کلید بعدی (بدون غیرفعال کردن)
+    else if (status === 400) {
+      console.log(`🔁 key ${keyIdx} got 400 → trying next key`);
+    }
+
+    // سایر خطاهای HTTP → برو کلید بعدی
+    else if (status >= 400 && status < 600) {
+      console.log(`🔁 HTTP error ${status} → trying next key`);
+    }
+
+    requestQueue.push({ req, res, next });
+    setTimeout(processQueue, 500);
   }
 }
 
