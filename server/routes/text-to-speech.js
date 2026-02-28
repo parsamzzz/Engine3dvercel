@@ -25,8 +25,29 @@ let successTimes = [];
 setInterval(() => { successTimes = []; console.log('🔄 شمارش موفقیت‌ها ریست شد.'); }, 24*60*60*1000);
 
 function sanitizeText(text) {
-  return text?.replace(/[\u0000-\u001F\u007F\u2028\u2029\u200B-\u200D\uFEFF]/g, '') || '';
+  if (!text) return '';
+
+  const allowed = /[آ-ی۰-۹a-zA-Z\s.,:!?ءًٌٍَُِّْٰٔ]/;
+
+  let result = '';
+  let prevChar = '';
+
+  for (const char of text) {
+    if (!allowed.test(char)) continue; 
+
+    // حذف تکرار پشت سر هم علامت دستور زبانی
+    if (/[.,:!?]/.test(char) && char === prevChar) continue;
+
+    result += char;
+    prevChar = char;
+  }
+
+  // تبدیل تمام فاصله‌های غیرمعمول به فاصله معمولی و حذف فاصله‌های پشت سر هم
+  result = result.replace(/[\s\u200B-\u200D\uFEFF]+/g, ' ').trim();
+
+  return result;
 }
+
 
 function getNextAvailableKey() {
   const now = Date.now();
